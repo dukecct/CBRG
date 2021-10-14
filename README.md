@@ -4,11 +4,9 @@
 
 # CBRG
 
-``` r
 <!-- badges: start -->
-use_lifecycle_badge("experimental")
-<!-- badges: end -->
-```
+
+use\_lifecycle\_badge(“experimental”) <!-- badges: end -->
 
 The goal of CBRG is to …
 

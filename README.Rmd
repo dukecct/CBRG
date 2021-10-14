@@ -17,11 +17,10 @@ knitr::opts_chunk$set(
 
 # CBRG
 
-``` r
+
 <!-- badges: start -->
 use_lifecycle_badge("experimental")
 <!-- badges: end -->
-```
 
 The goal of CBRG is to ...
 
