@@ -5,6 +5,7 @@
 
 ![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)
 
+<!-- <img src="inst/imgfile.png" height="300"/> -->
 <!-- badges: start -->
 <!-- badges: end -->
 
@@ -51,9 +52,9 @@ Our goal is to work through various relevant books, beginning with the
 following - [Computational Genomics with
 R](http://compgenomr.github.io/book/) by Prof. Altuna Akalin
 
-We will also discuss relevant examples from other sources  
-<!-- Useful info below -->
+We will also discuss relevant examples from other sources
 
+<!-- Useful info below -->
 <!-- ## Example -->
 <!-- This is a basic example which shows you how to solve a common problem: -->
 <!-- ```{r example} -->
