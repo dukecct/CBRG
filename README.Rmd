@@ -27,7 +27,7 @@ library("badger")
 # :computer::pill: Computational Biology Reading Group (CBRG)
 `r badger::badge_custom("lifecycle", "experimental", "orange")`
 
-<!-- <img src="inst/imgfile.png" height="300"/> -->
+<img src="inst/imgfile.png" height="300"/>
 
 <!-- badges: start -->
 <!-- badges: end -->

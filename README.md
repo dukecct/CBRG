@@ -5,7 +5,8 @@
 
 ![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)
 
-<!-- <img src="inst/imgfile.png" height="300"/> -->
+<img src="inst/imgfile.png" height="300"/>
+
 <!-- badges: start -->
 <!-- badges: end -->
 
