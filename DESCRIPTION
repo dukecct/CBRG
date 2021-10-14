@@ -1,11 +1,13 @@
 Package: CBRG
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Code, files, and functions for CBRG meetups
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Akshay Bareja [aut, cre], 
+    Pol Castellano [aut], 
+    Matthew Hirschey [aut]
+Maintainer: Akshay Bareja <akshay.bareja@duke.edu>
+Description: Code, files, and functions for CBRG meetups
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.1.2

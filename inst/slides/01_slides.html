@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Tidybiology</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Matthew Hirschey &amp; Akshay Bareja" />
+    <meta name="date" content="2021-10-14" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/freezeframe/freezeframe.min.js"></script>
+    <script src="libs/xaringanExtra-freezeframe/freezeframe-init.js"></script>
+    <script id="xaringanExtra-freezeframe-options" type="application/json">{"selector":"img[src$=\"gif\"]","trigger":"click","overlay":false,"responsive":true,"warnings":true}</script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copy Code","success":"Copied!","error":"Press Ctrl+C to Copy"})</script>
+    <link href="libs/panelset/panelset.css" rel="stylesheet" />
+    <script src="libs/panelset/panelset.js"></script>
+    <script src="libs/kePrint/kePrint.js"></script>
+    <link href="libs/lightable/lightable.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Tidybiology
+## ⚔<br/>Intro to Data Science Using R
+### Matthew Hirschey &amp; Akshay Bareja
+### Duke University
+### 2021-10-14
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+class: center, middle
+
+# Getting to know your data  
+
+---
+class: center, middle
+
+![Data](https://media.giphy.com/media/ftAyb0CG1FNAIZt4SO/giphy.gif)
+
+Datasets can get very complicated!
+
+---
+
+class: center, middle
+
+# R has some simple functions to help you perform Exploratory Data Analysis (EDA) 
+
+---
+# Getting to know your data  
+
+--
+
+We will use a dataset called **happy**  
+
+--
+
+Kaggle  
+
+--
+
+Happiness score for each country   
+
+--
+---
+# World Happiness Report
+
+&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+&lt;caption&gt;Source: Gallup World Poll&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Variable &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Description &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; country_name &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Country name &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ladder_score &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Cantril ladder score &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; gdp &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Log GDP per capita &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; social_support &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Measure of support (0 or 1) &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+---
+# What does your dataset contain?
+
+Just enter the name of your dataset!
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 5 × 4
+##   country_name ladder_score   gdp social_support
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Iraq                 4.85  9.24          0.746
+## 2 Comoros              4.29  8.03          0.626
+## 3 Panama               6.18 10.4           0.896
+## 4 Maldives             5.20  9.83          0.913
+## 5 Spain                6.49 10.6           0.932
+```
+
+
+
+]
+]
+---
+# Inspecting your dataframe: dimensions
+
+Use the `dim()` function to see how many rows (observations) and columns (variables) are in **happy**  
+
+`dim(happy)`  
+
+--
+
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+dim(happy)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## [1] 5 4
+```
+
+
+
+]
+]  
+
+---
+# Inspecting your dataframe: glimpse
+
+Use the `glimpse()` function to see what kinds of variables the `happy` dataset contains   
+
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+glimpse(happy)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## Rows: 5
+## Columns: 4
+## $ country_name   &lt;chr&gt; "Iraq", "Comoros", "Panama", "Maldives", "Spain"
+## $ ladder_score   &lt;dbl&gt; 4.854, 4.289, 6.180, 5.198, 6.491
+## $ gdp            &lt;dbl&gt; 9.240, 8.031, 10.350, 9.826, 10.571
+## $ social_support &lt;dbl&gt; 0.746, 0.626, 0.896, 0.913, 0.932
+```
+
+
+
+]
+]
+---
+## Basic Data Types in R
+
+R uses different data types -  
+
+--
+**character** - `"a"`, `"tidyverse"`    
+
+--
+**numeric** - `2`, `11.5`    
+
+--
+**integer** - `2L` (the `L` tells R to store this as an integer)    
+
+--
+**logical** - `TRUE`, `FALSE`    
+
+--
+**complex** - `1+4i`    
+
+--
+
+(**raw**)  
+
+--
+
+You will also come across the **double** datatype. This refers to numbers with decimal points 
+
+--
+
+**factor**. A **factor** is a collection of *ordered* character variables    
+---
+# (Re)Introducing `%&gt;%`
+
+The `%&gt;%` operator is a way of "chaining" together strings of commands that make reading your code easy  
+--
+
+The following code chunk illustrates how `%&gt;%` works:  
+  
+`happy %&gt;%`  
+    `select(country_name, ladder_score) %&gt;%`   
+    `filter(country_name == "Panama")` 
+    
+--
+
+```
+## # A tibble: 1 × 2
+##   country_name ladder_score
+##   &lt;chr&gt;               &lt;dbl&gt;
+## 1 Panama               6.18
+```
+---
+    
+# (Re)Introducing `%&gt;%` 
+
+The alternative to using `%&gt;%` is running the following code  
+
+
+`filter(select(happy, country_name, ladder_score), country_name == "Panama")`
+
+--
+
+Although this is only one line as opposed to three, it's both more difficult to write and more difficult to read      
+
+---
+background-image: url(https://dplyr.tidyverse.org/logo.png)
+---
+# Introducing `dplyr` 
+  
+dplyr is a package that contains a suite of functions that allow you to easily manipulate a dataset  
+
+--
+
+Some of the things you can do are -  
+- select rows and columns that match specific criteria  
+- create new variables (columns)  
+- obtain summary statistics on individual groups within your datasets  
+
+--
+
+The main verbs we will cover are `select()`, `filter()`, `arrange()`, `mutate()`, and `summarise()`. These all combine naturally with `group_by()` which allows you to perform any operation "by group"  
+---
+class: center, middle
+
+# `select()` 
+
+---
+# Understanding `select()` 
+--
+.center[
+![select](https://github.com/BAREJAA/tidyexplain/blob/master/images/select.gif?raw=true)
+]
+.footnote[Garrick Aden-Buie]
+---
+# `select()` specific columns from your dataset 
+The most basic `select()` is one where you comma separate a list of columns you want included  
+
+
+For example, if you only want to select the `country_name` and `gdp` columns, run the following code chunk  
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  select(country_name, gdp)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 5 × 2
+##   country_name   gdp
+##   &lt;chr&gt;        &lt;dbl&gt;
+## 1 Iraq          9.24
+## 2 Comoros       8.03
+## 3 Panama       10.4 
+## 4 Maldives      9.83
+## 5 Spain        10.6
+```
+
+
+
+]
+]
+---
+# `select()` 
+
+If you want to select all columns *except* `gdp`, run the following  
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  select(-gdp)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 5 × 3
+##   country_name ladder_score social_support
+##   &lt;chr&gt;               &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Iraq                 4.85          0.746
+## 2 Comoros              4.29          0.626
+## 3 Panama               6.18          0.896
+## 4 Maldives             5.20          0.913
+## 5 Spain                6.49          0.932
+```
+
+
+
+]
+]
+---
+# `select()` 
+
+Finally, you can provide a range of columns to return two columns and everything in between. For example  
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  select(ladder_score:social_support)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 5 × 3
+##   ladder_score   gdp social_support
+##          &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1         4.85  9.24          0.746
+## 2         4.29  8.03          0.626
+## 3         6.18 10.4           0.896
+## 4         5.20  9.83          0.913
+## 5         6.49 10.6           0.932
+```
+
+
+
+]
+]
+---
+class: center, middle
+
+# `filter()` 
+
+---
+# `filter()` rows based on certain condition(s) 
+
+The `filter()` verb evaluates a logical statement, and if a row meets the condition of this statement (i.e. is true) then it gets chosen (or "filtered")    
+  
+--
+
+**All other rows are discarded**  
+
+---
+
+# Understanding `filter()` 
+--
+.center[
+![filter_cat](https://github.com/BAREJAA/tidyexplain/blob/master/images/filter_categorical.gif?raw=true)
+]
+.footnote[Garrick Aden-Buie]
+---
+.center[
+![filter_num](https://github.com/BAREJAA/tidyexplain/blob/master/images/filter_numeric.gif?raw=true)
+]
+.footnote[Garrick Aden-Buie]
+---
+# `filter()` 
+
+Filtering can be performed on **categorical** data    
+
+--
+
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  filter(country_name == "Spain")
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 1 × 4
+##   country_name ladder_score   gdp social_support
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Spain                6.49  10.6          0.932
+```
+
+
+
+]
+]  
+
+--
+
+Note that `filter()` only applies to rows, and has no effect on columns  
+
+---
+# `filter()`
+
+Filtering can also be performed on **numeric** data    
+
+--
+
+For example, if you wanted to choose `ladder_score` with a value greater than `5`, you would run the following  
+
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  filter(ladder_score &gt; 5)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 3 × 4
+##   country_name ladder_score   gdp social_support
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Panama               6.18 10.4           0.896
+## 2 Maldives             5.20  9.83          0.913
+## 3 Spain                6.49 10.6           0.932
+```
+
+
+
+]
+]
+---
+# `filter()` 
+
+To filter on multiple conditions, you can write a sequence of `filter()` commands  
+
+--
+
+.panelset[
+
+```r
+happy %&gt;% 
+  filter(ladder_score &gt; 5) %&gt;% 
+  filter(gdp &lt; 10)
+```
+
+```
+## # A tibble: 1 × 4
+##   country_name ladder_score   gdp social_support
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Maldives             5.20  9.83          0.913
+```
+]
+
+---
+# `filter()` 
+
+To avoid writing multiple `filter()` commands, multiple logical statements can be put inside a single `filter()` command, separated by commas  
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  filter(ladder_score &gt; 5,
+         gdp &lt; 10)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 1 × 4
+##   country_name ladder_score   gdp social_support
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Maldives             5.20  9.83          0.913
+```
+
+
+
+]
+]
+---
+class: center, middle
+
+# `arrange()` 
+
+---
+
+# Understanding `arrange()` 
+--
+.center[
+![arrange](https://github.com/BAREJAA/tidyexplain/blob/master/images/arrange.gif?raw=true)
+]
+.footnote[Garrick Aden-Buie]
+---
+# `arrange()` sorts rows 
+
+The input for arrange is one or many columns, and `arrange()` sorts the rows in ascending order i.e. from smallest to largest  
+
+
+For example, to sort rows from smallest to largest in `ladder_score`, run the following  
+
+--
+
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  arrange(ladder_score)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 5 × 4
+##   country_name ladder_score   gdp social_support
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Comoros              4.29  8.03          0.626
+## 2 Iraq                 4.85  9.24          0.746
+## 3 Maldives             5.20  9.83          0.913
+## 4 Panama               6.18 10.4           0.896
+## 5 Spain                6.49 10.6           0.932
+```
+
+
+
+]
+]  
+
+---
+# `arrange()` 
+
+To reverse this order, use the `desc()` function within `arrange()`  
+
+--
+
+.panelset[
+
+```r
+happy %&gt;% 
+  arrange(desc(ladder_score))
+```
+
+```
+## # A tibble: 5 × 4
+##   country_name ladder_score   gdp social_support
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Spain                6.49 10.6           0.932
+## 2 Panama               6.18 10.4           0.896
+## 3 Maldives             5.20  9.83          0.913
+## 4 Iraq                 4.85  9.24          0.746
+## 5 Comoros              4.29  8.03          0.626
+```
+]  
+
+---
+class: center, middle
+
+# `mutate()` 
+
+---
+# `mutate()` 
+
+The `mutate()` verb, unlike the ones covered so far, creates new variable(s) i.e. new column(s). For example  
+
+--
+
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  mutate(gdp_sqrt = sqrt(gdp))
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 5 × 5
+##   country_name ladder_score   gdp social_support gdp_sqrt
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;    &lt;dbl&gt;
+## 1 Iraq                 4.85  9.24          0.746     3.04
+## 2 Comoros              4.29  8.03          0.626     2.83
+## 3 Panama               6.18 10.4           0.896     3.22
+## 4 Maldives             5.20  9.83          0.913     3.13
+## 5 Spain                6.49 10.6           0.932     3.25
+```
+
+
+
+]
+]  
+---
+class: center, middle
+
+# `group_by() and summarize()` 
+
+---
+# `summarise()` and `summarize()`
+
+`summarize()` is one of the key functions in `dplyr`. It produces a new dataframe that aggregates that values of a column based on a certain condition  
+
+--
+  
+For example, to calculate the mean `ladder_score`, run the following  
+
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy %&gt;% 
+  summarize(mean(ladder_score))
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 1 × 1
+##   `mean(ladder_score)`
+##                  &lt;dbl&gt;
+## 1                 5.40
+```
+
+
+
+]
+]
+---
+# `group_by()` 
+
+`group_by()` and `summarize()` are a powerful combination of functions to summarize by groups 
+
+--
+
+To show off the power of this duo, let's take a look at the entire dataset - called `happy_full` - that contains additional columns, one of which is called `region`  
+
+--
+
+Let's take a look at this full dataset
+  
+
+```
+## # A tibble: 6 × 20
+##   country_name region         ladder_score standard_error_… upperwhisker lowerwhisker logged_gdp_per_… social_support
+##   &lt;chr&gt;        &lt;chr&gt;                 &lt;dbl&gt;            &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;            &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Finland      Western Europe         7.84            0.032         7.90         7.78             10.8          0.954
+## 2 Denmark      Western Europe         7.62            0.035         7.69         7.55             10.9          0.954
+## 3 Switzerland  Western Europe         7.57            0.036         7.64         7.5              11.1          0.942
+## 4 Iceland      Western Europe         7.55            0.059         7.67         7.44             10.9          0.983
+## 5 Netherlands  Western Europe         7.46            0.027         7.52         7.41             10.9          0.942
+## 6 Norway       Western Europe         7.39            0.035         7.46         7.32             11.1          0.954
+## # … with 12 more variables: healthy_life_expectancy &lt;dbl&gt;, freedom_to_make_life_choices &lt;dbl&gt;,
+## #   generosity &lt;dbl&gt;, perceptions_of_corruption &lt;dbl&gt;, ladder_score_in_dystopia &lt;dbl&gt;,
+## #   explained_by_log_gdp_per_capita &lt;dbl&gt;, explained_by_social_support &lt;dbl&gt;,
+## #   explained_by_healthy_life_expectancy &lt;dbl&gt;, explained_by_freedom_to_make_life_choices &lt;dbl&gt;,
+## #   explained_by_generosity &lt;dbl&gt;, explained_by_perceptions_of_corruption &lt;dbl&gt;, dystopia_residual &lt;dbl&gt;
+```
+---
+
+# `group_by()`
+
+Let's again calculate the mean `ladder_score` but this time by region
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+happy_full %&gt;% 
+  group_by(region) %&gt;% 
+  summarize(mean(ladder_score))
+```
+
+]
+
+.panel[.panel-name[Output]
+
+```
+## # A tibble: 10 × 2
+##    region                             `mean(ladder_score)`
+##    &lt;chr&gt;                                             &lt;dbl&gt;
+##  1 Central and Eastern Europe                         5.98
+##  2 Commonwealth of Independent States                 5.47
+##  3 East Asia                                          5.81
+##  4 Latin America and Caribbean                        5.91
+##  5 Middle East and North Africa                       5.22
+##  6 North America and ANZ                              7.13
+##  7 South Asia                                         4.44
+##  8 Southeast Asia                                     5.41
+##  9 Sub-Saharan Africa                                 4.49
+## 10 Western Europe                                     6.91
+```
+
+
+
+]
+]
+---
+class: center, middle
+
+# Saving Your Work
+
+---
+# Saving a new dataset as an object
+
+If you'd like to save the output of your wrangling as an object, you will need to use the `&lt;-` operator  
+
+`mean_happy &lt;- happy_full %&gt;%`  
+                `group_by(region) %&gt;%`   
+                `summarize(mean(ladder_score))`  
+  
+  
+*Assigning the object the same name (i.e. `happy_full`) will overwrite the object  
+---
+  
+# Saving a new dataset as a file
+
+To save `mean_happy` as a new file (e.g. csv), run the following:  
+
+  
+`write_csv(mean_happy, "mean_happy.csv")`
+---
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

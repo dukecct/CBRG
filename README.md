@@ -32,6 +32,31 @@ This package will be frequently updated, so please *ensure that you also
 frequently re-install this package* (“frequent” being around once a week
 if you would like to keep up-to-date)
 
+## Useful Functions
+
+To launch a presentation for a particular class (e.g. class 1), run the
+following
+
+``` r
+CBRG::launch_slides(class = 1)
+```
+
+To launch an R Markdown file for in-class activities, run the following
+
+``` r
+CBRG::launch_class(class = 1)
+```
+
+To see the corresponding file with ALL the code, set the
+`show_answers =` parameter to `TRUE`
+
+``` r
+CBRG::launch_class(class = 1, show_answers = TRUE)
+```
+
+To launch the homework R Markdown files, use the function
+`launch_homework()` (which works just like `launch_class()`)
+
 ## :mega: Discussions
 
 If you have any questions or would like to introduce yourself, you can
