@@ -1,0 +1,40 @@
+---
+title: "Homework One (Answers)"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load any necessary package(s)
+library(tidyverse)
+```
+
+Q1. Fix the errors in the code below 
+```{r}
+genes <- c("IGF1", "IGF1R", "AKT1", "SHC1", "IRS1")
+exons <- c(7, 26, 15, 14, 2)
+```
+
+Q2. Use the vectors created above to make a new data frame. Call this object `my_df`
+```{r}
+my_df <- data.frame(genes, exons)
+```
+
+Q3. Create a new data frame that only contains genes that have a higher-than-average exon number
+```{r}
+long_df <- my_df %>% 
+            filter(exons > mean(exons))
+```
+
+Q4. Which function would you use to work out the number of rows and columns this new data frame contains?
+```{r}
+dim(long_df)
+```
+
+Q5. Create a new folder in your project called `data/`. Move a data file to this folder (the file can in any common format e.g. .csv, .xlsx etc). Import this file into your Global Environment and take a look at the first few rows 
+```{r}
+# possible answer
+my_important_df <- read_csv("data/world_domination.csv")
+```
+

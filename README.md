@@ -78,6 +78,10 @@ Our goal is to work through various relevant books, beginning with the
 following - [Computational Genomics with
 R](http://compgenomr.github.io/book/) by Prof. Altuna Akalin
 
+and [Omics Data
+Analysis](https://uclouvain-cbio.github.io/WSBIM2122/index.html) by
+Prof. Laurent Gatto
+
 We will also discuss relevant examples from other sources
 
 <!-- Useful info below -->

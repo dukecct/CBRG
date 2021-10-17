@@ -1,9 +1,9 @@
 ---
-title: "Tidybiology"
-subtitle: "⚔<br/>Intro to Data Science Using R"
-author: "Matthew Hirschey & Akshay Bareja"
-institute: "Duke University"
-date: "`r Sys.Date()`"
+title: "Computational Biology Reading Group"
+subtitle: "<br/>CBRG"
+author: ""
+institute: "DMPI"
+date: ""
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -23,8 +23,6 @@ library(xaringanExtra)
 library(janitor)
 library(xaringanthemer)
 
-happy <- read_csv("https://raw.githubusercontent.com/BAREJAA/website_for_john/master/datasets/happy_small.csv")
-happy_full <- read_csv("https://raw.githubusercontent.com/BAREJAA/website_for_john/master/datasets/world-happiness-report-2021.csv") %>% clean_names() %>% rename(region = regional_indicator)
 ```
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
@@ -53,436 +51,41 @@ xaringanExtra::use_panelset()
 ---
 class: center, middle
 
-# Getting to know your data  
+# Welcome! 
 
 ---
-class: center, middle
+# Goals of the reading group  
 
-![Data](https://media.giphy.com/media/ftAyb0CG1FNAIZt4SO/giphy.gif)
+--
+- Learn how to use R to answer questions of biological interest 
 
-Datasets can get very complicated!
+--
+- Build a community! 
+
+--
+- Create a repository of code/data/recordings  
 
 ---
+# Install R and RStudio
 
-class: center, middle
+Install R - https://www.r-project.org
 
-# R has some simple functions to help you perform Exploratory Data Analysis (EDA) 
-
+Install RStudio - https://www.rstudio.com/products/rstudio/download/
 ---
-# Getting to know your data  
 
---
-
-We will use a dataset called **happy**  
-
---
-
-Kaggle  
-
---
-
-Happiness score for each country   
-
---
----
-# World Happiness Report
-
-```{r whr, echo = FALSE}
-whr <- tribble(
-  ~Variable, ~Description,
-  "country_name", "Country name",
-  "ladder_score", "Cantril ladder score",
-  "gdp", "Log GDP per capita"   ,
-  "social_support", "Measure of support (0 or 1)" 
-)
-
-whr %>%
-  kbl(caption = "Source: Gallup World Poll") %>%
-  kable_styling()
+```{r, echo = FALSE, fig.cap = "Computational Genomics with R by Altuna Akalin"}
+knitr::include_url("http://compgenomr.github.io/book/")
 ```
----
-# What does your dataset contain?
 
-Just enter the name of your dataset!
---
-.panelset[
-```{r panelset = TRUE}
-happy
+---
+```{r, echo = FALSE, fig.cap = "Omics Data Analysis by Laurent Gatto"}
+knitr::include_url("https://uclouvain-cbio.github.io/WSBIM2122/index.html")
 ```
-]
----
-# Inspecting your dataframe: dimensions
-
-Use the `dim()` function to see how many rows (observations) and columns (variables) are in **happy**  
-
-`dim(happy)`  
-
---
-
-.panelset[
-```{r panelset = TRUE}
-dim(happy)
-```
-]  
 
 ---
-# Inspecting your dataframe: glimpse
+# For today 
 
-Use the `glimpse()` function to see what kinds of variables the `happy` dataset contains   
+- Create a project  
+- Install the CBRG package 
+- Do some exercises!  
 
---
-.panelset[
-```{r panelset = TRUE}
-glimpse(happy)
-```
-]
----
-## Basic Data Types in R
-
-R uses different data types -  
-
---
-**character** - `"a"`, `"tidyverse"`    
-
---
-**numeric** - `2`, `11.5`    
-
---
-**integer** - `2L` (the `L` tells R to store this as an integer)    
-
---
-**logical** - `TRUE`, `FALSE`    
-
---
-**complex** - `1+4i`    
-
---
-
-(**raw**)  
-
---
-
-You will also come across the **double** datatype. This refers to numbers with decimal points 
-
---
-
-**factor**. A **factor** is a collection of *ordered* character variables    
----
-# (Re)Introducing `%>%`
-
-The `%>%` operator is a way of "chaining" together strings of commands that make reading your code easy  
---
-
-The following code chunk illustrates how `%>%` works:  
-  
-`happy %>%`  
-    `select(country_name, ladder_score) %>%`   
-    `filter(country_name == "Panama")` 
-    
---
-```{r %>% , echo = FALSE}
-happy %>% 
-  select(country_name, ladder_score) %>% 
-  filter(country_name == "Panama")
-```
----
-    
-# (Re)Introducing `%>%` 
-
-The alternative to using `%>%` is running the following code  
-
-
-`filter(select(happy, country_name, ladder_score), country_name == "Panama")`
-
---
-
-Although this is only one line as opposed to three, it's both more difficult to write and more difficult to read      
-
----
-background-image: url(https://dplyr.tidyverse.org/logo.png)
----
-# Introducing `dplyr` 
-  
-dplyr is a package that contains a suite of functions that allow you to easily manipulate a dataset  
-
---
-
-Some of the things you can do are -  
-- select rows and columns that match specific criteria  
-- create new variables (columns)  
-- obtain summary statistics on individual groups within your datasets  
-
---
-
-The main verbs we will cover are `select()`, `filter()`, `arrange()`, `mutate()`, and `summarise()`. These all combine naturally with `group_by()` which allows you to perform any operation "by group"  
----
-class: center, middle
-
-# `select()` 
-
----
-# Understanding `select()` 
---
-.center[
-![select](https://github.com/BAREJAA/tidyexplain/blob/master/images/select.gif?raw=true)
-]
-.footnote[Garrick Aden-Buie]
----
-# `select()` specific columns from your dataset 
-The most basic `select()` is one where you comma separate a list of columns you want included  
-
-
-For example, if you only want to select the `country_name` and `gdp` columns, run the following code chunk  
---
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  select(country_name, gdp)
-```
-]
----
-# `select()` 
-
-If you want to select all columns *except* `gdp`, run the following  
---
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  select(-gdp)
-```
-]
----
-# `select()` 
-
-Finally, you can provide a range of columns to return two columns and everything in between. For example  
---
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  select(ladder_score:social_support)
-```
-]
----
-class: center, middle
-
-# `filter()` 
-
----
-# `filter()` rows based on certain condition(s) 
-
-The `filter()` verb evaluates a logical statement, and if a row meets the condition of this statement (i.e. is true) then it gets chosen (or "filtered")    
-  
---
-
-**All other rows are discarded**  
-
----
-
-# Understanding `filter()` 
---
-.center[
-![filter_cat](https://github.com/BAREJAA/tidyexplain/blob/master/images/filter_categorical.gif?raw=true)
-]
-.footnote[Garrick Aden-Buie]
----
-.center[
-![filter_num](https://github.com/BAREJAA/tidyexplain/blob/master/images/filter_numeric.gif?raw=true)
-]
-.footnote[Garrick Aden-Buie]
----
-# `filter()` 
-
-Filtering can be performed on **categorical** data    
-
---
-
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  filter(country_name == "Spain")
-```
-]  
-
---
-
-Note that `filter()` only applies to rows, and has no effect on columns  
-
----
-# `filter()`
-
-Filtering can also be performed on **numeric** data    
-
---
-
-For example, if you wanted to choose `ladder_score` with a value greater than `5`, you would run the following  
-
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  filter(ladder_score > 5)
-```
-]
----
-# `filter()` 
-
-To filter on multiple conditions, you can write a sequence of `filter()` commands  
-
---
-
-.panelset[
-```{r panselset = TRUE}
-happy %>% 
-  filter(ladder_score > 5) %>% 
-  filter(gdp < 10)
-```
-]
-
----
-# `filter()` 
-
-To avoid writing multiple `filter()` commands, multiple logical statements can be put inside a single `filter()` command, separated by commas  
---
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  filter(ladder_score > 5,
-         gdp < 10)
-```
-]
----
-class: center, middle
-
-# `arrange()` 
-
----
-
-# Understanding `arrange()` 
---
-.center[
-![arrange](https://github.com/BAREJAA/tidyexplain/blob/master/images/arrange.gif?raw=true)
-]
-.footnote[Garrick Aden-Buie]
----
-# `arrange()` sorts rows 
-
-The input for arrange is one or many columns, and `arrange()` sorts the rows in ascending order i.e. from smallest to largest  
-
-
-For example, to sort rows from smallest to largest in `ladder_score`, run the following  
-
---
-
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  arrange(ladder_score)
-```
-]  
-
----
-# `arrange()` 
-
-To reverse this order, use the `desc()` function within `arrange()`  
-
---
-
-.panelset[
-```{r panselset = TRUE}
-happy %>% 
-  arrange(desc(ladder_score))
-```
-]  
-
----
-class: center, middle
-
-# `mutate()` 
-
----
-# `mutate()` 
-
-The `mutate()` verb, unlike the ones covered so far, creates new variable(s) i.e. new column(s). For example  
-
---
-
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  mutate(gdp_sqrt = sqrt(gdp))
-```
-]  
----
-class: center, middle
-
-# `group_by() and summarize()` 
-
----
-# `summarise()` and `summarize()`
-
-`summarize()` is one of the key functions in `dplyr`. It produces a new dataframe that aggregates that values of a column based on a certain condition  
-
---
-  
-For example, to calculate the mean `ladder_score`, run the following  
-
---
-.panelset[
-```{r panelset = TRUE}
-happy %>% 
-  summarize(mean(ladder_score))
-```
-]
----
-# `group_by()` 
-
-`group_by()` and `summarize()` are a powerful combination of functions to summarize by groups 
-
---
-
-To show off the power of this duo, let's take a look at the entire dataset - called `happy_full` - that contains additional columns, one of which is called `region`  
-
---
-
-Let's take a look at this full dataset
-  
-```{r happy_full, echo = FALSE}
-head(happy_full)
-```
----
-
-# `group_by()`
-
-Let's again calculate the mean `ladder_score` but this time by region
---
-.panelset[
-```{r panelset = TRUE}
-happy_full %>% 
-  group_by(region) %>% 
-  summarize(mean(ladder_score))
-```
-]
----
-class: center, middle
-
-# Saving Your Work
-
----
-# Saving a new dataset as an object
-
-If you'd like to save the output of your wrangling as an object, you will need to use the `<-` operator  
-
-`mean_happy <- happy_full %>%`  
-                `group_by(region) %>%`   
-                `summarize(mean(ladder_score))`  
-  
-  
-*Assigning the object the same name (i.e. `happy_full`) will overwrite the object  
----
-  
-# Saving a new dataset as a file
-
-To save `mean_happy` as a new file (e.g. csv), run the following:  
-
-  
-`write_csv(mean_happy, "mean_happy.csv")`
----
