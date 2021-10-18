@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Q1. Fix the errors in the code below 
 ```{r}
-genes <- ("IGF1", "IGF1R", "AKT1", "SHC1", "IRS1")
+genes <- ("IGF1", "IGF1R", "AKT1" "SHC1", "IRS1")
 exons <- (7, 26, 15, 14, 2)
 ```
 
