@@ -3,7 +3,7 @@ title: "Computational Biology Reading Group"
 subtitle: "<br/>CBRG"
 author: ""
 institute: "DMPI"
-date: ""
+date: "Oct 20, 2021"
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -14,7 +14,6 @@ output:
       countIncrementalSlides: false
 ---
 
-
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
 library(tidyverse)
@@ -22,11 +21,9 @@ library(kableExtra)
 library(xaringanExtra)
 library(janitor)
 library(xaringanthemer)
-
 ```
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
-library(xaringanthemer)
 style_mono_accent(
   base_color = "#00539B",
   header_font_google = google_font("Adobe Caslon"),
@@ -48,44 +45,55 @@ xaringanExtra::use_clipboard()
 xaringanExtra::use_panelset()
 ```
 
----
 class: center, middle
 
 # Welcome! 
 
 ---
+
 # Goals of the reading group  
 
 --
-- Learn how to use R to answer questions of biological interest 
+
+  - Learn how to use R to answer questions of biological interest
 
 --
-- Build a community! 
+
+  - Build a community! 
 
 --
-- Create a repository of code/data/recordings  
+
+  - Create a repository of code/data/recordings  
 
 ---
+
 # Install R and RStudio
 
 Install R - https://www.r-project.org
 
 Install RStudio - https://www.rstudio.com/products/rstudio/download/
+
 ---
 
-```{r, echo = FALSE, fig.cap = "Computational Genomics with R by Altuna Akalin"}
+# Comp. Genomics with R
+
+```{r, echo = FALSE, fig.cap = "Computational Genomics with R by Altuna Akalin", out.width = "100%"}
 knitr::include_url("http://compgenomr.github.io/book/")
 ```
 
 ---
-```{r, echo = FALSE, fig.cap = "Omics Data Analysis by Laurent Gatto"}
+
+# Omics Data Analysis
+
+```{r, echo = FALSE, fig.cap = "Omics Data Analysis by Laurent Gatto", out.width = "100%"}
 knitr::include_url("https://uclouvain-cbio.github.io/WSBIM2122/index.html")
 ```
 
 ---
+
 # For today 
 
-- Create a project  
-- Install the CBRG package 
-- Do some exercises!  
+  - Create an R project  
+  - Install the [CBRG package](https://github.com/BAREJAA/CBRG) 
+  - Do some exercises!  
 
