@@ -1,18 +1,24 @@
 ---
-title: "Class One"
+title: "Class One: Computational Biology Reading Group"
+author: "Your name"
+date: "Oct 20, 2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
 
-# I am a comment
+# Hey! I am a comment, how are you?
+
+# Run the following line to install all requires packages
+# install.packages("tidyverse")
+library(tidyverse) 
 ```
 
 # R Basics
 
 ## R can be used as a glorified calculator  
+
 ```{r calc}
 # arithmetic operations
 2 + 3 * 5
@@ -28,6 +34,7 @@ abs(5-10)
 ## Data structures 
 
 ### Vectors
+
 ```{r vectors}
 # vector
 vec <- c(1, -2, 10, -4, 5)
@@ -45,8 +52,12 @@ vec[1:3]
 ```
 
 ### Matrices
+
 ```{r matrices}
 # create a matrix
+matrix(c(1,3,2,5,-1,2,2,3,9), nrow = 3)
+
+# assign this matrix to an object called "m"
 m <- matrix(c(1,3,2,5,-1,2,2,3,9), nrow = 3)
 m
 
@@ -61,21 +72,22 @@ m[1, ]
 m[, 1]
 
 # select ALL the elements of the first two rows
-m[1:2, ]
+m[1:2 ,]
 ```
 
-### Dataframe
+### Data frames
+
 ```{r dataframe}
-# create a dataframe
+# create a data frame
 chr <- c("chr1", "chr1", "chr2", "chr2")
-strand <- c("-","-","+","+")
+strand <- c("-", "-", "+", "+")
 start <- c(200, 4000, 100, 400)
 end <- c(250, 410, 200, 450)
 mydata <- data.frame(chr, start, end, strand)
 
 # select columns 1 and 3
 # base R way
-
+mydata[ , c(1, 3)]
 
 # the dplyr way
 select(mydata, c(1, 3))
@@ -95,17 +107,18 @@ mydata %>%
 
 # assign the output of the above to a new object
 mydata_2 <- mydata %>% 
-              filter(chr == "chr1") %>% 
-              select(c(1, 3))
+  filter(chr == "chr1") %>% 
+  select(c(1, 3))
 
 # What would this look like WITHOUT the pipe?
 
 
-# NOTE: Dplyr only works with dataframes and NOT matrices!
+# NOTE: dplyr only works with data frames and NOT matrices!
 ```
 
 ### Importing Data
+
 ```{r data-import}
-golub_subjects <- read_csv("https://raw.githubusercontent.com/BAREJAA/website_for_john/master/datasets/golub_kaggle/golub_subjects.csv")
+golub_subjects <- readr::read_csv("https://raw.githubusercontent.com/BAREJAA/website_for_john/master/datasets/golub_kaggle/golub_subjects.csv")
 ```
 

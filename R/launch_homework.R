@@ -2,41 +2,35 @@
 #'
 #' This function launches the named class Rmd file
 #'
-#' @param class enter the relevant class number (as an int)
-#' @return opens the corresponding Rmd file in RStudio
-#' @param show_answers enter TRUE or FALSE (default is FALSE)
-#' @return opens the corresponding Rmd file WITH ANSWERS in RStudio
-#' @param testing enter TRUE or FALSE (default is FALSE)
-#' @return appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE
+#' @param class enter the relevant class number (as an int). Opens the corresponding Rmd file in RStudio.
+#' @param show_answers enter TRUE or FALSE (default is FALSE). Opens the corresponding Rmd file WITH ANSWERS in RStudio.
+#' @param testing enter TRUE or FALSE (default is FALSE). Appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE.
 #' @author Akshay Bareja
 #' @example
 #' launch_homework(class = 1)
 #'
 #' @export
 
-
 launch_homework <- function(class = 1, show_answers = FALSE, testing = FALSE){
+
   package_path <- find.package("CBRG")
-  classes <- c("01_hw.Rmd", "02_hw.Rmd", "03_hw.Rmd", "04_hw.Rmd", "05_hw.Rmd")
-  answers <- c("01_hw_answers.Rmd", "02_hw_answers.Rmd", "03_hw_answers.Rmd",
-               "04_hw_answers.Rmd", "05_hw_answers.Rmd")
 
-  if(testing == TRUE){
-    if(show_answers == TRUE){
-      file <- answers[class]
-      rstudioapi::navigateToFile(paste0(package_path, "/inst/homework/", file))
-    } else {
-
-      file <- classes[class]
-      rstudioapi::navigateToFile(paste0(package_path, "/inst/homework/", file))
-    }
+  if(testing){
+    homework_path <- "/inst/homework/"
   } else {
-    if(show_answers == TRUE){
-      file <- answers[class]
-      rstudioapi::navigateToFile(paste0(package_path, "/homework/", file))
-    } else {
-      file <- classes[class]
-      rstudioapi::navigateToFile(paste0(package_path, "/homework/", file))
-    }
+    homework_path <- "/homework/"
   }
+
+  if(show_answers) {
+
+    file <- paste0("0", class, "_hw_answers.Rmd")
+    rstudioapi::navigateToFile(paste0(package_path, homework_path, file))
+
+  } else {
+
+    file <- paste0("0", class, "_hw.Rmd")
+    rstudioapi::navigateToFile(paste0(package_path, homework_path, file))
+  }
+
 }
+
