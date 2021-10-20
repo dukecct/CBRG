@@ -80,7 +80,9 @@ R](http://compgenomr.github.io/book/) by Prof. Altuna Akalin
 
 and [Omics Data
 Analysis](https://uclouvain-cbio.github.io/WSBIM2122/index.html) by
-Prof. Laurent Gatto
+Prof. Laurent Gatto  
+Laurent Gatto and Axelle Loriot. UCLouvain-CBIO/WSBIM2122: Omics data
+analysis. <https://github.com/UCLouvain-CBIO/WSBIM2122>.
 
 We will also discuss relevant examples from other sources
 

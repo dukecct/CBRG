@@ -29,6 +29,9 @@ log(10)
 # useful base R functions
 sqrt(256)
 abs(5-10)
+
+# how to look up what a function does
+?abs
 ```
 
 ## Data structures 

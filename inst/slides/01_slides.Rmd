@@ -91,6 +91,14 @@ knitr::include_url("https://uclouvain-cbio.github.io/WSBIM2122/index.html")
 
 ---
 
+# Computational Biology is... Biology!
+
+```{r, echo = FALSE, fig.cap = "", out.width = "100%"}
+knitr::include_url("https://storage.googleapis.com/plos-corpus-prod/10.1371/journal.pbio.2002050/1/pbio.2002050.pdf?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=wombat-sa%40plos-prod.iam.gserviceaccount.com%2F20211019%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20211019T192938Z&X-Goog-Expires=86400&X-Goog-SignedHeaders=host&X-Goog-Signature=99b6ae23b66e10ced55e4e50cd7fb9b3fe8652734a417ba8b4b8c42c3b5848231737639388d3739addc3514bf2e793df361ff7d4afc5c260af1cc60f312d895de9bf5d783eafe08ba0420171e250425f54799aace080083bdd9be95be380273c8107047e0c2e410213d328fac2905a1979f9824977fd591ee49e81001af4ff4ce44e4643ad092115ac047dbe7d18a6e856fd78cce17cdbbd4379491a3ecb343ee3b63e4830906ff63115f0b40402ed07c926a5ca9f9f7554a73871dddbfc01a14f35947347745fa3ca03069b0ae81e7cb74728f41e9d979301e2928ef493d48ff4f183524f062600b43934f553740990e540c6011adea068d6cf4bf53073bb15")
+```
+
+---
+
 # For today 
 
   - Create an R project  
