@@ -14,7 +14,8 @@ output:
       countIncrementalSlides: false
 ---
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(fig.width = 6, message = FALSE, warning = FALSE, comment = "", cache = F)
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, comment = "", cache = F,
+                      fig.align = "center", out.width = "90%")
 options(htmltools.dir.version = FALSE)
 library(tidyverse)
 library(kableExtra)
@@ -65,56 +66,80 @@ class: center, middle
 --
 
   - The ggplot2 way!!!
+  
 ---
+
 # Re-visitng the Golub dataset
 
-```{r, echo = F}
+```{r echo = F}
 knitr::kable(head(golub_subjects), format = "html")
 ```
 
 ---
+
 # Simple plots in R
 
 Plotting a histogram  
 
 --
+
 .panelset[
-```{r panelset = TRUE, fig.height = 5}
+
+```{r panelset = TRUE, out.width = "50%"}
 hist(golub_subjects$mean_ALL)
 ```
+
 ]
+
 ---
+
 # Boxplot in base R 
 
 --
+
 .panelset[
-```{r panelset = TRUE, fig.height = 5}
+
+```{r panelset = TRUE, out.width = "50%"}
 boxplot(golub_subjects$mean_ALL)
+
 ```
+
 ]
+
 ---
+
 # Boxplot Challenge
 
 How would you plot this?  
+
 --
-```{r, fig.height = 5, echo = FALSE}
+
+```{r echo = FALSE, out.width = "50%"}
 boxplot(golub_subjects[ , c(2:39)])
 ```
 
 ---
+
 class: center, middle
 
-# Making pretty plots with Ggplot2 
+# Making pretty plots with `ggplot2` 
 
 ---
+
 background-image: url(https://github.com/bbc/bbplot/blob/master/chart_examples/bbplot_example_plots.png?raw=true)
 background-size: contain
+
 ---
+
 background-image: url(https://www.r-graph-gallery.com/img/graph/271-ggplot2-animated-gif-chart-with-gganimate1.gif)
 background-size: contain
+
 ---
+
 background-image: url(https://ggplot2.tidyverse.org/logo.png)
+
 ---
+
 # Why `ggplot2`?
 
 --
@@ -123,7 +148,7 @@ background-image: url(https://ggplot2.tidyverse.org/logo.png)
   
 --
   
-- Works well with Dplyr  
+- Works well with `dplyr`  
   
 --
   
@@ -136,7 +161,9 @@ background-image: url(https://ggplot2.tidyverse.org/logo.png)
 Plotting a histogram  
 
 --
+
 .panelset.sideways[
+
 ```{r include=FALSE}
 hist_panel_names <- c(
   source = "R Code",
@@ -144,40 +171,49 @@ hist_panel_names <- c(
 )
 ```
 
-```{r panelset = hist_panel_names, out.width = '50%'}
+```{r panelset = hist_panel_names}
 ggplot(golub_subjects) +
   geom_histogram(aes(mean_ALL))
 ```
 ]
+
 ---
+
 class: center, middle
 
-# Anatomy of a Ggplot
+# Anatomy of a ggplot
 
 ---
+
 # Graphing Template
 
 ```{r eval = FALSE}
 ggplot(data = <DATA>) + 
   <GEOM_FUNCTION>(mapping = aes(<MAPPINGS>))
 ```
+
 --
+
 ```{r eval = FALSE}
 ggplot(<DATA>) + 
   <GEOM_FUNCTION>(aes(<MAPPINGS>))
 ```
 
 ---
+
 # A Simple Histogram
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot(golub_subjects) +
   geom_histogram(aes(mean_ALL))
 ```
+
 ---
+
 # Making Improvements
 
 .panelset.sideways[
+
 ```{r include=FALSE}
 density_panel_names <- c(
   source = "R Code",
@@ -185,23 +221,30 @@ density_panel_names <- c(
 )
 ```
 
-```{r panelset = density_panel_names, out.width = '50%'}
+```{r panelset = density_panel_names}
 ggplot(golub_subjects) +
   geom_density(aes(mean_ALL))
 ```
+
 ]
+
 ---
+
+# Making Improvements
+
 --
-```{r out.width = '50%', warning = FALSE, message = FALSE, eval = FALSE}
+
+```{r warning = FALSE, message = FALSE, eval = FALSE}
 ggplot(golub_subjects) +
   geom_histogram(aes(mean_ALL)) #<<
 ```
 --
-```{r out.width = '50%', warning = FALSE, message = FALSE, eval = FALSE}
+```{r warning = FALSE, message = FALSE, eval = FALSE}
 ggplot(golub_subjects) +
   geom_density(aes(mean_ALL)) #<<
 ```
 ---
+
 # How similar are ALL and AML? 
 
 .panelset.sideways[
@@ -212,7 +255,7 @@ scatter_panel_names <- c(
 )
 ```
 
-```{r panelset = scatter_panel_names, out.width = '50%'}
+```{r panelset = scatter_panel_names}
 ggplot(golub_subjects) +
   geom_point(aes(mean_ALL, mean_AML)) 
 ```
@@ -228,79 +271,90 @@ linear_panel_names <- c(
 )
 ```
 
-```{r panelset = linear_panel_names, out.width = '50%', message = FALSE}
+```{r panelset = linear_panel_names, message = FALSE}
 ggplot(golub_subjects) +
   geom_point(aes(mean_ALL, mean_AML))  +
   geom_smooth(aes(mean_ALL, mean_AML), method = "lm")
 ```
 ]
 ---
+
 # Inheritance
 --
-```{r out.width = '50%', warning = FALSE, message = FALSE, eval = FALSE}
+```{r warning = FALSE, message = FALSE, eval = FALSE}
 ggplot(golub_subjects) +
   geom_point(aes(mean_ALL, mean_AML)) + #<<
   geom_smooth(aes(mean_ALL, mean_AML), method = "lm") #<<
 ```
 --
-```{r out.width = '50%', warning = FALSE, message = FALSE, eval = FALSE}
+
+```{r warning = FALSE, message = FALSE, eval = FALSE}
 ggplot(golub_subjects, aes(mean_ALL, mean_AML)) + #<<
   geom_point() + 
   geom_smooth(method = "lm") 
 ```
 ---
+
 # Layering
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot() 
 ```
+
 ---
+
 # Layering
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot(golub_subjects) 
 ```
 ---
+
 # Layering
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot(golub_subjects, aes(mean_ALL, mean_AML)) 
 ```
+
 ---
 # Layering
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_point()
 ```
 ---
+
 # Layering
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_point() +
   geom_smooth()
 ```
 ---
+
 # Layering
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_point() +
   geom_smooth(method = "lm")
 ```
 ---
+
 # Layering
 
-```{r out.width = '50%', warning = FALSE, message = FALSE}
+```{r warning = FALSE, message = FALSE, out.width = "50%"}
 ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE)
 ```
 ---
+
 # Plotting Challenge
 
-```{r, fig.height = 5, echo = FALSE}
+```{r, echo = FALSE, out.width = "50%"}
 ggplot(filter(proteins, length > mean(length)), aes(length, mass)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE) +
@@ -312,6 +366,7 @@ ggplot(filter(proteins, length > mean(length)), aes(length, mass)) +
   theme_bw()
 ```
 ---
+
 # Un peu d'aide de mes amis 
 
 --
@@ -319,11 +374,10 @@ install.packages("esquisse")
 esquisse::esquisser(proteins) 
 
 ---
+
 # The R Graph Gallery
 
 ```{r, echo = FALSE, out.width = "100%"}
 knitr::include_url("https://www.r-graph-gallery.com")
 ```
-
----
 

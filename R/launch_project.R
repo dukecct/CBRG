@@ -1,36 +1,41 @@
-#' Launch Rmd files for in-class activities
+#' Launch .Rmd files for in-project activities
 #'
-#' This function launches the named class Rmd file
+#' @description This function launches the named project .Rmd file
 #'
-#' @param class enter the relevant class number (as an int). Opens the corresponding Rmd file in RStudio.
-#' @param show_answers enter TRUE or FALSE (default is FALSE). Opens the corresponding Rmd file WITH ANSWERS in RStudio.
-#' @param testing enter TRUE or FALSE (default is FALSE). Appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE.
-#' @author Akshay Bareja
-#' @author Pol Castellano
-#' @example
-#' launch_project(class = 1)
+#' @param project Integer indicating the relevant project number.
+#' @param show_answers Logical (default == FALSE). If this parameter is set to TRUE, answers will be shown in the .Rmd file.
+#' @param testing Logical (default == FALSE). Appropriate path is selected depending on what environment the package is runing in. USERS CAN IGNORE.
 #'
 #' @export
-
-launch_project <- function(class = 1, show_answers = FALSE, testing = FALSE){
+#'
+#' @return Opens the corresponding .Rmd file in RStudio (with or without answers).
+#' @author Akshay Bareja, Pol Castellano-Escuder
+#'
+#' @examples
+#' # Project Number 1
+#' launch_project(project = 1)
+#'
+#' # Project Number 1 with Answers
+#' launch_project(project = 1, show_answers = TRUE)
+launch_project <- function(project = 1, show_answers = FALSE, testing = FALSE){
 
   package_path <- find.package("CBRG")
 
   if(testing){
-    class_path <- "/inst/projects/"
+    project_path <- "/inst/projects/"
   } else {
-    class_path <- "/projects/"
+    project_path <- "/projects/"
   }
 
   if(show_answers) {
 
-    file <- paste0("0", class, "_project_answers.Rmd")
-    rstudioapi::navigateToFile(paste0(package_path, class_path, file))
+    file <- paste0("0", project, "_project_answers.Rmd")
+    rstudioapi::navigateToFile(paste0(package_path, project_path, file))
 
     } else {
 
-    file <- paste0("0", class, "_project.Rmd")
-    rstudioapi::navigateToFile(paste0(package_path, class_path, file))
+    file <- paste0("0", project, "_project.Rmd")
+    rstudioapi::navigateToFile(paste0(package_path, project_path, file))
     }
 }
 
