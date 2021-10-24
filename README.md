@@ -34,28 +34,28 @@ if you would like to keep up-to-date)
 
 ## Useful Functions
 
-To launch a presentation for a particular class (e.g. class 1), run the
-following
+To launch a presentation for a particular meetup (e.g. meetup 1), run
+the following
 
 ``` r
-CBRG::launch_slides(class = 1)
+CBRG::launch_slides(1)
 ```
 
 To launch an R Markdown file for in-class activities, run the following
 
 ``` r
-CBRG::launch_class(class = 1)
+CBRG::launch_project(1)
 ```
 
 To see the corresponding file with ALL the code, set the
 `show_answers =` parameter to `TRUE`
 
 ``` r
-CBRG::launch_class(class = 1, show_answers = TRUE)
+CBRG::launch_class(1, show_answers = TRUE)
 ```
 
 To launch the homework R Markdown files, use the function
-`launch_homework()` (which works just like `launch_class()`)
+`launch_exercise()` (which works just like `launch_project()`)
 
 ## :mega: Discussions
 

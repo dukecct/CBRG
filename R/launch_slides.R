@@ -5,6 +5,7 @@
 #' @param class enter the relevant class number (as an int). Launches the corresponding html file in a browser.
 #' @param testing enter TRUE or FALSE (default is FALSE). Appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE.
 #' @author Akshay Bareja
+#' @author Pol Castellano
 #' @example
 #' launch_slides(class = 1)
 #'

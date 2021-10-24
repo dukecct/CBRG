@@ -7,18 +7,15 @@
 launch_slides(class = 1, testing = FALSE)
 }
 \arguments{
-\item{class}{enter the relevant class number (as an int)}
+\item{class}{enter the relevant class number (as an int). Launches the corresponding html file in a browser.}
 
-\item{testing}{enter TRUE or FALSE (default is FALSE)}
-}
-\value{
-launches the corresponding html file in a browser
-
-appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE
+\item{testing}{enter TRUE or FALSE (default is FALSE). Appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE.}
 }
 \description{
 This function launches the named presentation
 }
 \author{
 Akshay Bareja
+
+Pol Castellano
 }

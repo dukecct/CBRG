@@ -63,8 +63,8 @@ class: center, middle
 
 --
 
-  - Create a repository of code/data/recordings  
-
+  - Create a repository of code/data/recordings 
+  
 ---
 
 # Install R and RStudio

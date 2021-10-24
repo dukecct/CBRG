@@ -1,0 +1,96 @@
+---
+title: "Class Two (Answers): Computational Biology Reading Group"
+author: "Your name"
+date: "Oct 27, 2021"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse) 
+devtools::install_github("hirscheylab/tidybiology", force = TRUE)
+library(tidybiology)
+
+# we can import the required data in this chunk
+golub_subjects <- readr::read_csv("https://raw.githubusercontent.com/BAREJAA/website_for_john/master/datasets/golub_kaggle/golub_subjects.csv")
+
+data(proteins)
+```
+
+# Boxplots in base R
+
+Make boxplots for all the columns in the data frame `golub_subjects` EXCEPT for the following columns - `gene_name`, `mean_ALL`, `mean_AML`  
+
+Hints - 
+- which function would you use to work out how many columns your data frame has?
+- Using this information, select the relevant columns
+- the `boxplot()` function can take a whole data frame as input. If you do this, this function will plot separate boxplots for each column
+
+Step 1: Insert an R chunk below this line - 
+```{r}
+dim(golub_subjects)
+boxplot(golub_subjects[ , c(2:39)])
+```
+
+
+
+# Exploring the `proteins` dataframe
+```{r}
+# how many rows and columns does `proteins` contain?
+dim(proteins)
+
+# introducing a more powerful function - glimpse()
+glimpse(proteins)
+
+# create a new data frame that only contains the following columns - uniprot_id, length, mass
+proteins_select <- proteins %>% 
+                    select(uniprot_id, length, mass)
+
+# from this data frame, only choose proteins that have a HIGHER-THAN-AVERAGE LENGTH
+proteins_select <- proteins_select %>% 
+                      filter(length > mean(length))
+
+# use the data frame above to make a scatter plot of length vs mass
+ggplot(proteins_select, aes(length, mass)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) 
+
+# clean up/add labels
+ggplot(proteins_select, aes(length, mass)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Length",
+       y = "Mass",
+       title = "Plotting Protein Length versus Mass",
+       subtitle = "Just for proteins that are longer than average",
+       caption = "Data Source|Uniprot") 
+
+# change the look of your plot
+ggplot(proteins_select, aes(length, mass)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Length",
+       y = "Mass",
+       title = "Plotting Protein Length versus Mass",
+       subtitle = "Just for proteins that are longer than average",
+       caption = "Data Source|Uniprot") +
+  theme_bw()
+
+```
+
+# Exploring Esquisse
+
+```{r}
+# install the esquisse package from CRAN
+install.packages("esquisse")
+
+# run esquisser() on the `proteins` data frame
+# use this tool to make whatever plot you like
+esquisse::esquisser(proteins)
+
+# copy paste the esquisse code from above here
+
+# go through the code line-by-line to make sure you understand what all of it does
+
+```

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Computational Biology Reading Group</title>
+    <meta charset="utf-8" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/freezeframe/freezeframe.min.js"></script>
+    <script src="libs/xaringanExtra-freezeframe/freezeframe-init.js"></script>
+    <script id="xaringanExtra-freezeframe-options" type="application/json">{"selector":"img[src$=\"gif\"]","trigger":"click","overlay":false,"responsive":true,"warnings":true}</script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copy Code","success":"Copied!","error":"Press Ctrl+C to Copy"})</script>
+    <link href="libs/panelset/panelset.css" rel="stylesheet" />
+    <script src="libs/panelset/panelset.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Computational Biology Reading Group
+## <br/>CBRG
+### 
+### DMPI
+### Oct 27, 2021
+
+---
+
+
+
+
+
+
+
+
+
+
+
+class: center, middle
+
+# Welcome back! 
+
+---
+
+# Plotting in R  
+
+--
+
+  - The base R way
+
+--
+
+  - The ggplot2 way!!!
+---
+# Re-visitng the Golub dataset
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; gene_name &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_1 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_2 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_3 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_4 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_5 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_6 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_7 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_8 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_9 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_10 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_11 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_12 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_13 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_14 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_15 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_16 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_17 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_18 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_19 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_20 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_21 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_22 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_23 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_24 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_25 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_26 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; ALL_27 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_28 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_29 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_30 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_31 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_32 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_33 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_34 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_35 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_36 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_37 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; AML_38 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; mean_ALL &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; mean_AML &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; AFFX-HUMISGF3A/M97935_MA_at (endogenous control) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.45769 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.39420 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.42779 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.40715 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.42668 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.21719 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.37386 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.36832 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.47649 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.21583 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.28137 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.03209 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.36149 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.39979 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.17628 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.40095 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.56783 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.20466 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.24482 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.60767 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.06221 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.12665 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.20963 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.48332 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.25268 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.27619 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.23051 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.43337 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.08902 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.29865 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.26183 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.44434 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.10147 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.34158 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.22961 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.75919 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.84905 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.66465 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2715104 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7792473 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; AFFX-HUMISGF3A/M97935_MB_at (endogenous control) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.75161 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.26278 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.09052 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.99596 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.24245 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.69242 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.37386 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.50803 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.04533 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.81257 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.28137 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.03209 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.74005 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.83161 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.41200 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.27669 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.74370 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.20466 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.02380 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.38779 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.06221 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.12665 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.20963 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.12185 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.65264 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.27619 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.23051 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.18065 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.08902 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.05094 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.26183 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.25918 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.97813 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.79357 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.22961 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.71792 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.45127 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.45804 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9098137 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6919418 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; AFFX-HUMISGF3A/M97935_3_at (endogenous control) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.45695 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.09654 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.90325 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.07194 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.03232 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.09713 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.11978 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.23381 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.23987 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.44201 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.39560 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.62533 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.45181 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.09519 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.09318 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.34300 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.20010 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.38992 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.00641 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.10932 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.21952 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.72267 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.51690 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.28577 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.61937 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.20085 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.29278 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.26624 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.43377 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.10823 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.29385 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.05067 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.69430 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.12472 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.04609 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.24347 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.90774 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.46509 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2665778 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2466391 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; AFFX-HUMRGE/M10098_5_at (endogenous control) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.13533 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.21415 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.08754 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.23467 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.93811 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.24089 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.36576 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.97859 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.66468 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.21583 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.59110 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.26050 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.36149 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.64180 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.32621 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.40095 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.56783 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.83502 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.24482 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.60767 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.06221 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.69445 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.70837 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.48332 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.36698 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.27619 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.89604 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.71990 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.29598 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.29865 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.76869 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.08960 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.70003 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.13854 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.75908 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.06151 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.30297 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.58186 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9985141 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.8290464 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; AFFX-HUMRGE/M10098_M_at (endogenous control) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.76569 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.27045 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.60433 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.53182 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.63728 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.85697 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.01847 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.12853 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.17016 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.21583 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.10133 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.59982 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.36149 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.22853 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.34494 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.40095 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.56783 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.94532 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.24482 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.60767 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.06221 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.52458 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.70837 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.48332 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.79168 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.27619 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.24892 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.02799 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.08902 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.29865 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.00518 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.17454 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.47218 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.34158 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.55086 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.18107 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.01596 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.15788 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6856785 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0409173 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; AFFX-HUMRGE/M10098_3_at (endogenous control) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.64342 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.01416 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.70477 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.63845 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.36075 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.73451 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.36576 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.96870 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.72368 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.21583 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.20192 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.83418 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.36149 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.32744 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.52458 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.40095 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.56783 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.23780 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.24482 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.60767 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.06221 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.25470 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.73916 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.48332 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.23430 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.27619 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.83594 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.31110 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.08902 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.29865 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.73780 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.89347 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.52883 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.22168 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.90832 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.39906 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.51266 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.36249 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7380300 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1080545 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+---
+# Simple plots in R
+
+Plotting a histogram  
+
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+hist(golub_subjects$mean_ALL)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+![](02_slides_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
+
+]
+]
+---
+# Boxplot in base R 
+
+--
+.panelset[
+.panel[.panel-name[Code]
+
+```r
+boxplot(golub_subjects$mean_ALL)
+```
+
+]
+
+.panel[.panel-name[Output]
+
+![](02_slides_files/figure-html/unnamed-chunk-3-1.png)&lt;!-- --&gt;
+
+]
+]
+---
+# Boxplot Challenge
+
+How would you plot this?  
+--
+![](02_slides_files/figure-html/unnamed-chunk-4-1.png)&lt;!-- --&gt;
+
+---
+class: center, middle
+
+# Making pretty plots with Ggplot2 
+
+---
+background-image: url(https://github.com/bbc/bbplot/blob/master/chart_examples/bbplot_example_plots.png?raw=true)
+background-size: contain
+---
+background-image: url(https://www.r-graph-gallery.com/img/graph/271-ggplot2-animated-gif-chart-with-gganimate1.gif)
+background-size: contain
+---
+background-image: url(https://ggplot2.tidyverse.org/logo.png)
+---
+# Why `ggplot2`?
+
+--
+
+- Easy to use  
+  
+--
+  
+- Works well with Dplyr  
+  
+--
+  
+- **powerful** 
+  
+---
+
+# Simple plots using ggplot2  
+
+Plotting a histogram  
+
+--
+.panelset.sideways[
+
+
+.panel[.panel-name[R Code]
+
+```r
+ggplot(golub_subjects) +
+  geom_histogram(aes(mean_ALL))
+```
+
+]
+
+.panel[.panel-name[Histogram]
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-6-1.png" width="50%" /&gt;
+
+]
+]
+---
+class: center, middle
+
+# Anatomy of a Ggplot
+
+---
+# Graphing Template
+
+
+```r
+ggplot(data = &lt;DATA&gt;) + 
+  &lt;GEOM_FUNCTION&gt;(mapping = aes(&lt;MAPPINGS&gt;))
+```
+--
+
+```r
+ggplot(&lt;DATA&gt;) + 
+  &lt;GEOM_FUNCTION&gt;(aes(&lt;MAPPINGS&gt;))
+```
+
+---
+# A Simple Histogram
+
+
+```r
+ggplot(golub_subjects) +
+  geom_histogram(aes(mean_ALL))
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-9-1.png" width="50%" /&gt;
+---
+# Making Improvements
+
+.panelset.sideways[
+
+
+.panel[.panel-name[R Code]
+
+```r
+ggplot(golub_subjects) +
+  geom_density(aes(mean_ALL))
+```
+
+]
+
+.panel[.panel-name[Density Plot]
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-11-1.png" width="50%" /&gt;
+
+]
+]
+---
+--
+
+```r
+ggplot(golub_subjects) +
+* geom_histogram(aes(mean_ALL))
+```
+--
+
+```r
+ggplot(golub_subjects) +
+* geom_density(aes(mean_ALL))
+```
+---
+# How similar are ALL and AML? 
+
+.panelset.sideways[
+
+
+.panel[.panel-name[R Code]
+
+```r
+ggplot(golub_subjects) +
+  geom_point(aes(mean_ALL, mean_AML)) 
+```
+
+]
+
+.panel[.panel-name[Scatter Plot]
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-15-1.png" width="50%" /&gt;
+
+]
+]
+---
+# Emphasizing Trends
+
+.panelset.sideways[
+
+
+.panel[.panel-name[R Code]
+
+```r
+ggplot(golub_subjects) +
+  geom_point(aes(mean_ALL, mean_AML))  +
+  geom_smooth(aes(mean_ALL, mean_AML), method = "lm")
+```
+
+]
+
+.panel[.panel-name[Regression Plot]
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-17-1.png" width="50%" /&gt;
+
+]
+]
+---
+# Inheritance
+--
+
+```r
+ggplot(golub_subjects) +
+* geom_point(aes(mean_ALL, mean_AML)) +
+* geom_smooth(aes(mean_ALL, mean_AML), method = "lm")
+```
+--
+
+```r
+*ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
+  geom_point() + 
+  geom_smooth(method = "lm") 
+```
+---
+# Layering
+
+
+```r
+ggplot() 
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-20-1.png" width="50%" /&gt;
+---
+# Layering
+
+
+```r
+ggplot(golub_subjects) 
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-21-1.png" width="50%" /&gt;
+---
+# Layering
+
+
+```r
+ggplot(golub_subjects, aes(mean_ALL, mean_AML)) 
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-22-1.png" width="50%" /&gt;
+---
+# Layering
+
+
+```r
+ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
+  geom_point()
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-23-1.png" width="50%" /&gt;
+---
+# Layering
+
+
+```r
+ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
+  geom_point() +
+  geom_smooth()
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-24-1.png" width="50%" /&gt;
+---
+# Layering
+
+
+```r
+ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-25-1.png" width="50%" /&gt;
+---
+# Layering
+
+
+```r
+ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-26-1.png" width="50%" /&gt;
+---
+# Plotting Challenge
+
+![](02_slides_files/figure-html/unnamed-chunk-27-1.png)&lt;!-- --&gt;
+---
+# Un peu d'aide de mes amis 
+
+--
+install.packages("esquisse")  
+esquisse::esquisser(proteins) 
+
+---
+# The R Graph Gallery
+
+&lt;iframe src="https://www.r-graph-gallery.com" width="100%" height="400px" data-external="1"&gt;&lt;/iframe&gt;
+
+---
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -47,11 +47,11 @@ abs(vec)
 vec^2
 
 # how many elements are in my vector?
-length(vec)
+
 
 # subsetting a vector
 # select just the first three elements
-vec[1:3]
+
 ```
 
 ### Matrices
@@ -61,21 +61,20 @@ vec[1:3]
 matrix(c(1,3,2,5,-1,2,2,3,9), nrow = 3)
 
 # assign this matrix to an object called "m"
-m <- matrix(c(1,3,2,5,-1,2,2,3,9), nrow = 3)
-m
+
 
 # how many rows and columns does my matrix contain?
-dim(m)
+
 
 # subsetting a matrix
 # select only the elements of the first row
-m[1, ]
+
 
 # select only the elements of the first column
-m[, 1]
+
 
 # select ALL the elements of the first two rows
-m[1:2 ,]
+
 ```
 
 ### Data frames
@@ -90,28 +89,23 @@ mydata <- data.frame(chr, start, end, strand)
 
 # select columns 1 and 3
 # base R way
-mydata[ , c(1, 3)]
+
 
 # the dplyr way
-select(mydata, c(1, 3))
+
 
 # Introducing the pipe
 mydata %>% 
   select(c(1, 3))
 
 # Only choose rows corresponding to chr1
-mydata %>% 
-  filter(chr == "chr1")
+
 
 # Only choose rows corresponding to chr1 AND only keep columns 1 and 3
-mydata %>% 
-  filter(chr == "chr1") %>% 
-  select(c(1, 3))
+
 
 # assign the output of the above to a new object
-mydata_2 <- mydata %>% 
-  filter(chr == "chr1") %>% 
-  select(c(1, 3))
+
 
 # What would this look like WITHOUT the pipe?
 
