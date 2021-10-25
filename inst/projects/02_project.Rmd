@@ -23,15 +23,16 @@ data(proteins)
 Make boxplots for all the columns in the data frame `golub_subjects` EXCEPT for the following columns - `gene_name`, `mean_ALL`, `mean_AML`  
 
 Hints - 
-- which function would you use to work out how many columns your data frame has?
-- Using this information, select the relevant columns
-- the `boxplot()` function can take a whole data frame as input. If you do this, this function will plot separate boxplots for each column
+  - Which function would you use to work out how many columns your data frame has?
+  - Using this information, select the relevant columns
+  - The `boxplot()` function can take a whole data frame as input. If you do this, this function will plot separate boxplots for each column
 
 Step 1: Insert an R chunk below this line - 
 
 
 
 # Exploring the `proteins` dataframe
+
 ```{r}
 # how many rows and columns does `proteins` contain?
 
@@ -39,13 +40,13 @@ Step 1: Insert an R chunk below this line -
 # introducing a more powerful function - glimpse()
 glimpse(proteins)
 
-# create a new data frame that only contains the following columns - uniprot_id, length, mass
+# create a new data frame that only contains the following columns - "uniprot_id", "length", "mass"
 
 
 # from this data frame, only choose proteins that have a HIGHER-THAN-AVERAGE LENGTH
 
 
-# use the data frame above to make a scatter plot of length vs mass
+# use the data frame above to make a scatter plot of "length" vs "mass"
 
 
 # clean up/add labels
@@ -59,7 +60,7 @@ glimpse(proteins)
 # Exploring Esquisse
 
 ```{r}
-# install the esquisse package from CRAN
+# install the `esquisse` package from CRAN
 
 # run esquisser() on the `proteins` data frame
 # use this tool to make whatever plot you like

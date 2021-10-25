@@ -3,7 +3,7 @@
   <head>
     <title>Computational Biology Reading Group</title>
     <meta charset="utf-8" />
-    <script src="libs/header-attrs/header-attrs.js"></script>
+    <meta name="author" content="" />
     <script src="libs/freezeframe/freezeframe.min.js"></script>
     <script src="libs/xaringanExtra-freezeframe/freezeframe-init.js"></script>
     <script id="xaringanExtra-freezeframe-options" type="application/json">{"selector":"img[src$=\"gif\"]","trigger":"click","overlay":false,"responsive":true,"warnings":true}</script>
@@ -21,7 +21,6 @@ class: center, middle, inverse, title-slide
 
 # Computational Biology Reading Group
 ## <br/>CBRG
-### 
 ### DMPI
 ### Oct 27, 2021
 
@@ -52,7 +51,9 @@ class: center, middle
 --
 
   - The ggplot2 way!!!
+  
 ---
+
 # Re-visitng the Golub dataset
 
 &lt;table&gt;
@@ -364,66 +365,91 @@ class: center, middle
 &lt;/table&gt;
 
 ---
+
 # Simple plots in R
 
 Plotting a histogram  
 
 --
+
 .panelset[
+
 .panel[.panel-name[Code]
 
 ```r
 hist(golub_subjects$mean_ALL)
 ```
 
+
+
 ]
 
 .panel[.panel-name[Output]
 
-![](02_slides_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-2-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 
 ]
+
 ]
+
 ---
+
 # Boxplot in base R 
 
 --
+
 .panelset[
+
 .panel[.panel-name[Code]
 
 ```r
 boxplot(golub_subjects$mean_ALL)
 ```
 
+
+
 ]
 
 .panel[.panel-name[Output]
 
-![](02_slides_files/figure-html/unnamed-chunk-3-1.png)&lt;!-- --&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-3-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 
 ]
+
 ]
+
 ---
+
 # Boxplot Challenge
 
 How would you plot this?  
+
 --
-![](02_slides_files/figure-html/unnamed-chunk-4-1.png)&lt;!-- --&gt;
+
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-4-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 
 ---
+
 class: center, middle
 
-# Making pretty plots with Ggplot2 
+# Making pretty plots with `ggplot2` 
 
 ---
+
 background-image: url(https://github.com/bbc/bbplot/blob/master/chart_examples/bbplot_example_plots.png?raw=true)
 background-size: contain
+
 ---
+
 background-image: url(https://www.r-graph-gallery.com/img/graph/271-ggplot2-animated-gif-chart-with-gganimate1.gif)
 background-size: contain
+
 ---
+
 background-image: url(https://ggplot2.tidyverse.org/logo.png)
+
 ---
+
 # Why `ggplot2`?
 
 --
@@ -432,7 +458,7 @@ background-image: url(https://ggplot2.tidyverse.org/logo.png)
   
 --
   
-- Works well with Dplyr  
+- Works well with `dplyr`  
   
 --
   
@@ -445,7 +471,9 @@ background-image: url(https://ggplot2.tidyverse.org/logo.png)
 Plotting a histogram  
 
 --
+
 .panelset.sideways[
+
 
 
 .panel[.panel-name[R Code]
@@ -455,20 +483,25 @@ ggplot(golub_subjects) +
   geom_histogram(aes(mean_ALL))
 ```
 
+
+
 ]
 
 .panel[.panel-name[Histogram]
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-6-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-6-1.png" width="90%" style="display: block; margin: auto;" /&gt;
 
 ]
 ]
+
 ---
+
 class: center, middle
 
-# Anatomy of a Ggplot
+# Anatomy of a ggplot
 
 ---
+
 # Graphing Template
 
 
@@ -476,7 +509,9 @@ class: center, middle
 ggplot(data = &lt;DATA&gt;) + 
   &lt;GEOM_FUNCTION&gt;(mapping = aes(&lt;MAPPINGS&gt;))
 ```
+
 --
+
 
 ```r
 ggplot(&lt;DATA&gt;) + 
@@ -484,6 +519,7 @@ ggplot(&lt;DATA&gt;) +
 ```
 
 ---
+
 # A Simple Histogram
 
 
@@ -492,11 +528,14 @@ ggplot(golub_subjects) +
   geom_histogram(aes(mean_ALL))
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-9-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-9-1.png" width="50%" style="display: block; margin: auto;" /&gt;
+
 ---
+
 # Making Improvements
 
 .panelset.sideways[
+
 
 
 .panel[.panel-name[R Code]
@@ -506,16 +545,24 @@ ggplot(golub_subjects) +
   geom_density(aes(mean_ALL))
 ```
 
+
+
 ]
 
 .panel[.panel-name[Density Plot]
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-11-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-11-1.png" width="90%" style="display: block; margin: auto;" /&gt;
 
 ]
+
 ]
+
 ---
+
+# Making Improvements
+
 --
+
 
 ```r
 ggplot(golub_subjects) +
@@ -528,6 +575,7 @@ ggplot(golub_subjects) +
 * geom_density(aes(mean_ALL))
 ```
 ---
+
 # How similar are ALL and AML? 
 
 .panelset.sideways[
@@ -540,11 +588,13 @@ ggplot(golub_subjects) +
   geom_point(aes(mean_ALL, mean_AML)) 
 ```
 
+
+
 ]
 
 .panel[.panel-name[Scatter Plot]
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-15-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-15-1.png" width="90%" style="display: block; margin: auto;" /&gt;
 
 ]
 ]
@@ -562,15 +612,18 @@ ggplot(golub_subjects) +
   geom_smooth(aes(mean_ALL, mean_AML), method = "lm")
 ```
 
+
+
 ]
 
 .panel[.panel-name[Regression Plot]
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-17-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-17-1.png" width="90%" style="display: block; margin: auto;" /&gt;
 
 ]
 ]
 ---
+
 # Inheritance
 --
 
@@ -581,12 +634,14 @@ ggplot(golub_subjects) +
 ```
 --
 
+
 ```r
 *ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_point() + 
   geom_smooth(method = "lm") 
 ```
 ---
+
 # Layering
 
 
@@ -594,8 +649,10 @@ ggplot(golub_subjects) +
 ggplot() 
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-20-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-20-1.png" width="50%" style="display: block; margin: auto;" /&gt;
+
 ---
+
 # Layering
 
 
@@ -603,8 +660,9 @@ ggplot()
 ggplot(golub_subjects) 
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-21-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-21-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 ---
+
 # Layering
 
 
@@ -612,7 +670,8 @@ ggplot(golub_subjects)
 ggplot(golub_subjects, aes(mean_ALL, mean_AML)) 
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-22-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-22-1.png" width="50%" style="display: block; margin: auto;" /&gt;
+
 ---
 # Layering
 
@@ -622,8 +681,9 @@ ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_point()
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-23-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-23-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 ---
+
 # Layering
 
 
@@ -633,8 +693,9 @@ ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_smooth()
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-24-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-24-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 ---
+
 # Layering
 
 
@@ -644,8 +705,9 @@ ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_smooth(method = "lm")
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-25-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-25-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 ---
+
 # Layering
 
 
@@ -655,12 +717,14 @@ ggplot(golub_subjects, aes(mean_ALL, mean_AML)) +
   geom_smooth(method = "lm", se = FALSE)
 ```
 
-&lt;img src="02_slides_files/figure-html/unnamed-chunk-26-1.png" width="50%" /&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-26-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 ---
+
 # Plotting Challenge
 
-![](02_slides_files/figure-html/unnamed-chunk-27-1.png)&lt;!-- --&gt;
+&lt;img src="02_slides_files/figure-html/unnamed-chunk-27-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 ---
+
 # Un peu d'aide de mes amis 
 
 --
@@ -668,12 +732,10 @@ install.packages("esquisse")
 esquisse::esquisser(proteins) 
 
 ---
+
 # The R Graph Gallery
 
 &lt;iframe src="https://www.r-graph-gallery.com" width="100%" height="400px" data-external="1"&gt;&lt;/iframe&gt;
-
----
-
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
