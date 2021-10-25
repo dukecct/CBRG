@@ -1,0 +1,52 @@
+---
+title: "Exercise Two"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidybiology)
+data(chromosome)
+
+```
+
+For this exercise, we will be using the `chromosome` data set from the `tidybiology` package
+
+Q1. Take a look at the `chromosome` dataframe. What's a good function for this?
+```{r}
+
+```
+
+Q2. Make a density plot for the variable `length_mm`
+```{r}
+
+```
+
+Q3. Add two vertical lines to this density plot that correspond to the mean and median of `length_mm` respectively
+Hint: Use `geom_vline()` for this
+```{r}
+mean_length <- mean(chromosome$length_mm)
+median_length <- median(chromosome$length_mm)
+
+
+```
+
+Would you say this plot is skewed? Here's a nice chapter on the relationship between mean, median and skewness - https://openstax.org/books/introductory-business-statistics/pages/2-6-skewness-and-the-mean-median-and-mode
+
+Q4. Remove the y-axis label from the plot above. Also, change the x-axis label to "Length (mm)" 
+```{r}
+
+```
+
+Q5. Make a scatter plot for `protein_codinggenes` versus `pseudo_genes`
+BONUS: Using the function `geom_text_repel()` from the `ggrepel` package, label the point that corresponds to the chromosome with the highest number of protein coding genes (i.e. If it's chromosome 1, then the point will have the label "1")  
+
+Note: You might have to install this package. You can find it on CRAN.
+```{r}
+library(ggrepel)
+
+
+```
+
