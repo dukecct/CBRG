@@ -51,7 +51,7 @@ To see the corresponding file with ALL the code, set the
 `show_answers =` parameter to `TRUE`
 
 ``` r
-CBRG::launch_class(1, show_answers = TRUE)
+CBRG::launch_project(1, show_answers = TRUE)
 ```
 
 To launch the homework R Markdown files, use the function
