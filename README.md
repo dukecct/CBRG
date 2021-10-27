@@ -24,8 +24,8 @@ All meetups will be live-streamed and recorded here -
 You can install this package from [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("BAREJAA/CBRG", force = TRUE)
+# install.packages("remotes")
+remotes::install_github("BAREJAA/CBRG", force = TRUE)
 ```
 
 This package will be frequently updated, so please *ensure that you also
