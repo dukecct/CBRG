@@ -1,0 +1,171 @@
+---
+title: "Class Three (Answers): Computational Biology Reading Group"
+author: "Your name"
+date: "Nov 03, 2021"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!require("DESeq2"))
+    BiocManager::install("DESeq2")
+BiocManager::install("UCLouvain-CBIO/rWSBIM2122")
+
+library("rWSBIM2122")
+library(DESeq2)
+library(tidyverse)
+```
+
+# Performing RNA-seq analysis using the DESeq2 package
+
+For this walk-through we will be using the same example (and much of the same code!) as in this chapter - https://uclouvain-cbio.github.io/WSBIM2122/sec-rnaseq.html
+
+# Load data 
+
+```{r load}
+# system.file() finds the location of the specified file in the specified package
+# load() then opens the specified file (`.rda` objects in this case) so that they appear in our global environment 
+load(system.file("extdata/deseq2/counts.rda",
+                  package = "rWSBIM2122"))
+load(system.file("extdata/deseq2/coldata.rda",
+                  package = "rWSBIM2122"))
+# you should now see two new objects in your Environment pane (top right-hand corner)
+
+# `coldata` is a small dataframe, so just type its name in the console and press enter to see its contents
+coldata
+
+# `counts` is a much larger object. How many rows and columns does it have?
+dim(counts)
+
+# Take a look at the first few rows of `counts`
+head(counts)
+
+# Looking at these two dataframes, what kind of analysis/comparison would you perform?
+```
+
+# Construct a DESeqDataSet object
+```{r dds}
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ Condition) # what's this `design`? More about this later on
+
+# How do we learn more about this new function, DESeqDataSetFromMatrix() 
+?DESeqDataSetFromMatrix
+
+# take a look at this new `dds` object
+dds
+
+# `dds` is a new type formally known as an "S4 object"
+# S4 objects have slots that can be accessed by using the `@` symbol
+# to see our two original objects `coldata` and `counts`, we could run the following
+dds@colData
+dds@assays@data[[1]]
+
+# There are functions that allow us to access elements of `dds` in a more intuitive way
+# use the `counts()` function to access the original `counts` dataframe
+counts(dds)
+# we can also use the `assay()` function for this
+
+# use the `colData()` function to access the original (almost!) `coldata` dataframe
+colData(dds)
+# Is the output from above identical to the original `coldata` dataframe?
+
+# subsetting `dds`
+# only choose samples from the "mock" condition group
+dds_mock <- dds[ , dds$Condition == "mock"]
+
+# confirm that you only have "mock" samples
+colData(dds_mock)
+
+# take a look at the counts matrix for this new object. How many samples does this matrix have?
+counts(dds_mock)
+
+# using functions from the `tidyverse` package on `dds`
+# plot the counts distribution of sample1
+
+counts(dds) %>% 
+  as_tibble() %>% 
+  select(sample1) %>% 
+  ggplot(aes(log2(sample1 + 1))) +
+  geom_histogram(bins = 20)
+
+# how would you plot the count distributions of ALL the samples?
+# one quick approach is to use the base R `boxplot()` function
+boxplot(log2(counts(dds) + 1))
+
+# The tidyverse approach (boxplots or histograms) is a little more complicated...
+counts(dds) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(),
+               names_to = "sample",
+               values_to = "counts") %>% 
+  ggplot(aes(log2(counts + 1), fill = sample)) +
+  geom_histogram(bins = 20) +
+  facet_wrap(~sample)
+```
+
+# Run DESeq2
+```{r deseq2}
+dds <- DESeq(dds)
+# this function does a lot!
+# let's ignore all of this for now and take a look at the results :)
+results(dds)
+
+# Notice that the log2FoldChange has the "KD" group as the base comparison
+# why is this?
+dds$Condition
+class(dds$Condition)
+
+# `Condition` is a factor, meaning that it is a categorical variable, which is a variable that contains a fixed number of categories or groups that a given observation can belong to
+# The number of levels of a given factor refer to the number of categories this variable contains
+# The order of these levels determines how comparisons are made in statistical modeling
+# In the case of `Condition`, "KD" appears first and so is the base comparison group
+# To switch this order, we can run this - 
+res <- results(dds,
+               contrast = c("Condition", "KD", "mock"))
+res_df <- as_tibble(res, rownames = "ENSEMBL") # if we forget `rownames = `, we lose all the gene names!
+
+# How would you remove all the rows that have `NAs` for the `padj` column
+# We have a couple of options
+# clue -
+is.na(res_df$padj) # gives us a bunch of TRUEs and FALSEs. We can use this to filter out the unwanted rows
+res_df_nona <- res_df %>% 
+                filter(!is.na(padj))
+
+# or we could use the `drop_na()` function
+res_df_nona <- res_df %>% 
+                  drop_na(padj)
+
+# how to verify that there are no missing values for `padj`?
+sum(is.na(res_df_nona$padj)) # this should be 0!
+```
+
+# Linear models, design formulae, and t-tests
+```{r lm}
+# make a dummy dataframe
+lm_df <- tibble(
+  condition = factor(c("control", "control", "control", "treated", "treated", "treated"),
+                     levels = c("control", "treated")),
+  reading = c(1.2, 1.6, 0.9, 3.4, 3.1, 2.4)
+)
+
+# confirm that the level order is correct for `condition`
+levels(lm_df$condition)
+
+# compare the two groups - "control" and "treated" using a t-test
+t.test(reading ~ condition, data = lm_df, var.equal = TRUE)
+
+# perform simple linear regression
+lm_output <- lm(reading ~ condition, data = lm_df)
+summary(lm_output)
+
+# t.test and simple linear regression give us the same output!
+```
+
+For more on how common statistical tests are all just linear models in disguise, refer to this amazing article - 
+https://lindeloev.github.io/tests-as-linear/#51_independent_t-test_and_mann-whitney_u
+
+Next up - 
+- Diving deeper into DESeq2
+- PCA and clustering
+- Pathway analysis
