@@ -1,0 +1,55 @@
+---
+title: "Exercise Three"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(DESeq2)
+library(tidyverse)
+remotes::install_github("compgenomr/compGenomRData")
+```
+
+# Differential expression analysis in colorectal cancer
+
+For this exercise, we will be using a subset of count data from a colorectal cancer study, as described here - 
+http://compgenomr.github.io/book/gene-expression-analysis-using-high-throughput-sequencing-technologies.html#computing-different-normalization-schemes-in-r
+
+First run all the code in the chunk below. This code prepares the `countData` and `colData` objects we will need to make a DESeqDataSet object   
+
+```{r}
+counts_file <- system.file("extdata/rna-seq/SRP029880.raw_counts.tsv",
+                           package = "compGenomRData")
+coldata_file <- system.file("extdata/rna-seq/SRP029880.colData.tsv",
+                            package = "compGenomRData")
+
+counts <- as.matrix(read.table(counts_file, header = T, sep = '\t'))
+
+#remove the 'width' column
+countData <- as.matrix(subset(counts, select = c(-width)))
+#define the experimental setup 
+colData <- read.table(coldata_file, header = T, sep = '\t', 
+                      stringsAsFactors = TRUE)
+```
+
+Q1. Looking at `colData`, what type differential expression analysis could you reasonably perform? What would the design formula for this comparison be?
+A1. 
+
+Q2. How would make an appropriate DESeqDataSet object?
+A2.
+```{r}
+
+```
+
+Q3. How would you perform differential expression analysis? How would you inspect the results of this analysis?
+A3.
+```{r}
+
+```
+
+Q4. In the analysis above, we ended up comparing log2FoldChange of CTRL vs CASE. How would you perform this analysis so that you were comparing CASE vs CTRL?
+A4.
+```{r}
+
+```

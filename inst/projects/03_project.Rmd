@@ -1,5 +1,5 @@
 ---
-title: "Class Three (Answers): Computational Biology Reading Group"
+title: "Class Three: Computational Biology Reading Group"
 author: "Your name"
 date: "Nov 03, 2021"
 output: html_document
@@ -46,13 +46,13 @@ load(system.file("extdata/deseq2/coldata.rda",
 # you should now see two new objects in your Environment pane (top right-hand corner)
 
 # `coldata` is a small dataframe, so just type its name in the console and press enter to see its contents
-coldata
+
 
 # `counts` is a much larger object. How many rows and columns does it have?
-dim(counts)
+
 
 # Take a look at the first few rows of `counts`
-head(counts)
+
 
 # Looking at these two dataframes, what kind of analysis/comparison would you perform?
 ```
@@ -65,58 +65,46 @@ dds <- DESeqDataSetFromMatrix(countData = counts,
                               design = ~ Condition) # what's this `design`? More about this later on
 
 # How do we learn more about this new function, DESeqDataSetFromMatrix() from the DESeq2 package
-?DESeq2::DESeqDataSetFromMatrix
+
 
 # take a look at this new `dds` object
-dds
+
 
 # `dds` is a new type formally known as an "S4 object"
 # S4 objects have slots that can be accessed by using the `@` symbol
 # to see our two original objects `coldata` and `counts`, we could run the following
-dds@colData
-dds@assays@data[[1]]
+
 
 # There are functions that allow us to access elements of `dds` in a more intuitive way
 # use the `counts()` function to access the original `counts` dataframe
-counts(dds)
+
 # we can also use the `assay()` function for this
 
 # use the `colData()` function to access the original (almost!) `coldata` dataframe
-colData(dds)
+
 # Is the output from above identical to the original `coldata` dataframe?
 
 # subsetting `dds`
 # only choose samples from the "mock" condition group
-dds_mock <- dds[ , dds$Condition == "mock"]
+
 
 # confirm that you only have "mock" samples
-colData(dds_mock)
+
 
 # take a look at the counts matrix for this new object. How many samples does this matrix have?
-counts(dds_mock)
+
 
 # using functions from the `tidyverse` package on `dds`
 # plot the counts distribution of sample1
 
-counts(dds) %>% 
-  as_tibble() %>% 
-  select(sample1) %>% 
-  ggplot(aes(log2(sample1 + 1))) + # why +1? Because log2(0) is not an option...
-  geom_histogram(bins = 20)
+
 
 # how would you plot the count distributions of ALL the samples?
 # one quick approach is to use the base R `boxplot()` function
-boxplot(log2(counts(dds) + 1))
+
 
 # The tidyverse approach (boxplots or histograms) is a little more complicated...
-counts(dds) %>% 
-  as_tibble() %>% 
-  pivot_longer(cols = everything(),
-               names_to = "sample",
-               values_to = "counts") %>% 
-  ggplot(aes(log2(counts + 1), fill = sample)) +
-  geom_histogram(bins = 20) +
-  facet_wrap(~ sample)
+
 ```
 
 # Run DESeq2
@@ -125,12 +113,11 @@ counts(dds) %>%
 dds <- DESeq(dds)
 # this function does a lot!
 # let's ignore all of this for now and take a look at the results :)
-results(dds)
+
 
 # Notice that the log2FoldChange has the "KD" group as the base comparison
 # why is this?
-dds$Condition
-class(dds$Condition)
+
 
 # `Condition` is a factor, meaning that it is a categorical variable, which is a variable that contains a fixed number of categories or groups that a given observation can belong to
 # The number of levels of a given factor refer to the number of categories this variable contains
@@ -145,15 +132,13 @@ res_df <- as_tibble(res, rownames = "ENSEMBL") # if we forget `rownames = `, we 
 # We have a couple of options
 # clue -
 is.na(res_df$padj) # gives us a bunch of TRUEs and FALSEs. We can use this to filter out the unwanted rows
-res_df_nona <- res_df %>% 
-                filter(!is.na(padj))
+
 
 # or we could use the `drop_na()` function
-res_df_nona <- res_df %>% 
-                  drop_na(padj)
+
 
 # how to verify that there are no missing values for `padj`?
-sum(is.na(res_df_nona$padj)) # this should be 0!
+
 ```
 
 # Linear models, design formula, and t-tests
