@@ -7,11 +7,25 @@ output: html_document
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-if (!require("DESeq2"))
-    BiocManager::install("DESeq2")
-BiocManager::install("UCLouvain-CBIO/rWSBIM2122")
 
-library("rWSBIM2122")
+# install.packages(c("BiocManager", "remotes"))
+
+# Install Bioconductor packages
+installBiocifnot <- function(pckgName){
+  if (!(require(pckgName, character.only = TRUE))) {
+    BiocManager::install(pckgName)
+    require(pckgName, character.only = TRUE)
+  }
+}
+
+bioc_pkgs <- c("DESeq2", "UCLouvain-CBIO/rWSBIM2122")
+
+for (i in 1:length(bioc_pkgs)){
+  installBiocifnot(bioc_pkgs[i])
+}
+
+# Load packages
+library(rWSBIM2122)
 library(DESeq2)
 library(tidyverse)
 ```
@@ -44,13 +58,14 @@ head(counts)
 ```
 
 # Construct a DESeqDataSet object
+
 ```{r dds}
 dds <- DESeqDataSetFromMatrix(countData = counts,
                               colData = coldata,
                               design = ~ Condition) # what's this `design`? More about this later on
 
-# How do we learn more about this new function, DESeqDataSetFromMatrix() 
-?DESeqDataSetFromMatrix
+# How do we learn more about this new function, DESeqDataSetFromMatrix() from the DESeq2 package
+?DESeq2::DESeqDataSetFromMatrix
 
 # take a look at this new `dds` object
 dds
@@ -86,7 +101,7 @@ counts(dds_mock)
 counts(dds) %>% 
   as_tibble() %>% 
   select(sample1) %>% 
-  ggplot(aes(log2(sample1 + 1))) +
+  ggplot(aes(log2(sample1 + 1))) + # why +1? Because log2(0) is not an option...
   geom_histogram(bins = 20)
 
 # how would you plot the count distributions of ALL the samples?
@@ -101,10 +116,14 @@ counts(dds) %>%
                values_to = "counts") %>% 
   ggplot(aes(log2(counts + 1), fill = sample)) +
   geom_histogram(bins = 20) +
-  facet_wrap(~sample)
+  facet_wrap(~ sample)
+
+# Some stats here...
+# What is this distribution? Because it is clearly non normal... So, "classical" tests may not work here... WE WILL NEED SPECIFIC TESTS
 ```
 
 # Run DESeq2
+
 ```{r deseq2}
 dds <- DESeq(dds)
 # this function does a lot!
@@ -140,7 +159,8 @@ res_df_nona <- res_df %>%
 sum(is.na(res_df_nona$padj)) # this should be 0!
 ```
 
-# Linear models, design formulae, and t-tests
+# Linear models, design formula, and t-tests
+
 ```{r lm}
 # make a dummy dataframe
 lm_df <- tibble(
@@ -169,3 +189,4 @@ Next up -
 - Diving deeper into DESeq2
 - PCA and clustering
 - Pathway analysis
+
