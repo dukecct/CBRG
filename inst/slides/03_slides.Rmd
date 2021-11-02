@@ -1,0 +1,83 @@
+---
+title: "Computational Biology Reading Group"
+subtitle: "<br/>CBRG"
+author: ""
+institute: "DMPI"
+date: "Nov 03, 2021"
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, comment = "", cache = F,
+                      fig.align = "center", out.width = "90%")
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(kableExtra)
+library(xaringanExtra)
+library(janitor)
+library(xaringanthemer)
+library(knitr)
+library(tidybiology)
+data(proteins)
+
+golub_subjects <- readr::read_csv("https://raw.githubusercontent.com/BAREJAA/website_for_john/master/datasets/golub_kaggle/golub_subjects.csv")
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+style_mono_accent(
+  base_color = "#00539B",
+  header_font_google = google_font("Adobe Caslon"),
+  text_font_google   = google_font("Adobe Caslon", "300", "300i"),
+  code_font_google   = google_font("Fira Mono")
+)
+```
+
+```{r xaringanExtra-freezeframe, echo = FALSE, message = FALSE}
+options(htmltools.dir.version = FALSE)
+xaringanExtra::use_freezeframe()
+```
+
+```{r xaringanExtra-clipboard, echo=FALSE}
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+
+class: center, middle
+
+# RNA-seq analysis
+
+---
+
+# RNA-seq analysis  
+
+--
+
+  - 
+
+--
+
+  - The ggplot2 way!!!
+  
+---
+# Understanding `pivot_longer` 
+--
+.center[
+![select](https://github.com/BAREJAA/tidyexplain/blob/master/images/pivot_longer_wider.gif?raw=true)
+]
+.footnote[Garrick Aden-Buie]
+---
+.center[
+![select]("/Users/akshaybareja/Desktop/CCT stuff/CBRG/inst/media/03_class/regression_plots/Slide1.png")
+]
+.footnote[Garrick Aden-Buie]
+---
+
