@@ -68,16 +68,18 @@ class: center, middle
   - The ggplot2 way!!!
   
 ---
-# Understanding `pivot_longer` 
+# Understanding `pivot_*` 
 --
 .center[
 ![select](https://github.com/BAREJAA/tidyexplain/blob/master/images/pivot_longer_wider.gif?raw=true)
 ]
 .footnote[Garrick Aden-Buie]
 ---
-.center[
-![select]("/Users/akshaybareja/Desktop/CCT stuff/CBRG/inst/media/03_class/regression_plots/Slide1.png")
-]
-.footnote[Garrick Aden-Buie]
+![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide1.png)
 ---
-
+![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide2.png)
+---
+![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide3.png)
+---
+![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide4.png)
+---
