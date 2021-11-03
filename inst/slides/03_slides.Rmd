@@ -79,11 +79,39 @@ knitr::include_graphics("https://uclouvain-cbio.github.io/WSBIM2122/figs/deseq2_
 ]
 .footnote[Garrick Aden-Buie]
 ---
+
+# Linear Regression
+
+## Continuous variables
+
+.center[
 ![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide1.png)
+]
 ---
+
+# Linear Regression
+
+## Categorical variables
+
+.center[
 ![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide2.png)
+]
 ---
+
+# Linear Regression
+
+## Categorical variables
+
+.center[
 ![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide3.png)
+]
 ---
+
+# Linear Regression
+
+## Categorical variables
+
+.center[
 ![](https://raw.githubusercontent.com/dukecct/CBRG/main/inst/media/03_class/regression_plots/Slide4.png)
----
+]
+
