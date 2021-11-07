@@ -1,0 +1,204 @@
+---
+title: "Class Four (Answers): Computational Biology Reading Group"
+author: "Your name"
+date: "Nov 10, 2021"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# install.packages(c("BiocManager", "remotes"))
+
+# Install Bioconductor packages
+# installBiocifnot <- function(pckgName){
+#   if (!(require(pckgName, character.only = TRUE))) {
+#     BiocManager::install(pckgName)
+#     require(pckgName, character.only = TRUE)
+#   }
+# }
+# 
+# bioc_pkgs <- c("DESeq2", "UCLouvain-CBIO/rWSBIM2122")
+# 
+# for (i in 1:length(bioc_pkgs)){
+#   installBiocifnot(bioc_pkgs[i])
+# }
+
+# uncomment and run the above if you don't already have these packages installed
+# Load packages
+library(rWSBIM2122)
+library(DESeq2)
+library(tidyverse)
+```
+
+# Performing RNA-seq analysis using the DESeq2 package - continued
+
+For this walk-through we will be using the same example (and much of the same code!) as in this chapter - https://uclouvain-cbio.github.io/WSBIM2122/sec-rnaseq.html
+
+We will also be using the following vignettes as guides - 
+For DESeq2 - http://master.bioconductor.org/packages/release/workflows/vignettes/rnaseqGene/inst/doc/rnaseqGene.html#exploratory-analysis-and-visualization
+For biomaRt - http://127.0.0.1:20249/library/biomaRt/doc/accessing_ensembl.html
+
+# Load data and perform differential expression analysis
+
+```{r load-and-run}
+# system.file() finds the location of the specified file in the specified package
+# load() then opens the specified file (`.rda` objects in this case) so that they appear in our global environment 
+load(system.file("extdata/deseq2/counts.rda",
+                  package = "rWSBIM2122"))
+load(system.file("extdata/deseq2/coldata.rda",
+                  package = "rWSBIM2122"))
+# you should now see two new objects in your Environment pane (top right-hand corner)
+
+# Construct a DESeqDataSet object
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ Condition) 
+
+# Run DESeq2
+dds <- DESeq(dds)
+
+res <- results(dds,
+               contrast = c("Condition", "KD", "mock")) # we do this so that `mock` becomes the group we're comparing to
+```
+
+# Exploring the results table
+
+```{r res}
+# use `mcols` to learn more about the columns of `res`
+mcols(res)
+
+# to see the full descriptions, run this - 
+mcols(res)$description
+
+# [A COUPLE OF SLIDES ON FDR AND BH??]
+# [A SLIDE ON INDEPENDENT FILTERING?]
+
+# Diagnostic plots
+# MA plot
+
+# [WHAT DOES THIS PLOT SHOW??]
+# [NOTE: SAVE THIS FOR NEXT WEEK TO SHOW EFFETCS OF LFC SHRINKAGE?? YOU CAN THEN DO PATHWAY ANALYIS
+# ON THE SHRUNKEN DATA]
+plotMA(dds)
+# y-axis shows log2FC
+# x-axis shows mean of normalized counts
+# blue dots correspond to genes with padj <= 0.1
+
+# PCA plot
+# we need to first apply a regularized log transformation
+# if we don't do this, the PCA will be dominated by genes with highest ABSOLUTE count
+# this is because for RNA-seq count data, the variance increases with the mean 
+
+rld <- rlogTransformation(dds)
+plotPCA(rld)
+
+# Calculate sample distances
+sampleDists <- dist(t(assay(rld)))
+sampleDists
+
+# Plot heatmap of samples
+# install.packages("pheatmap")
+library(pheatmap)
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- dds$Condition
+colnames(sampleDistMatrix) <- NULL
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows = sampleDists)
+
+# Plot heatmap of genes
+BiocManager::install("genefilter")
+library("genefilter")
+
+# The `genefilter` package contains the helpful `rowVars()` function
+# Use this function to pick the top 20 most variable genes
+
+topVarGenes <- head(order(rowVars(assay(rld)), decreasing = TRUE), 20)
+# what do the numbers in `topVarGenes` mean
+topVarGenes
+# these numbers refer to the indices of the top 20 most variable genes in `rld`
+mat  <- assay(rld)[ topVarGenes, ]
+mat  <- mat - rowMeans(mat)
+anno <- as.data.frame(colData(rld)[, c("Condition")])
+# clean up the column name of `anno`
+colnames(anno) <- "Condition"
+# make sure the rownames of `anno` match the colnames of `mat`
+rownames(anno) <- colnames(mat)
+anno
+pheatmap(mat, annotation_col = anno)
+
+# Volcano plot
+# Adding gene names
+res_df <- as_tibble(res, rownames = "ENSEMBL") # if we forget `rownames = `, we lose all the gene names!
+# Remove rows that have `NAs` in the `padj` column
+res_df <- res_df %>% 
+            drop_na(padj)
+
+# create a new column called neg_log_10_padj in `res_df`
+res_df <- res_df %>% 
+            mutate(neg_log_10_padj = -log10(padj))
+
+# create a new column called `significant` that contain a TRUE if the following condition is satisfied - 
+# padj < 0.05 & abs(log2FoldChange) > 1
+# and contains a FALSE if the condition is NOT satisfied
+res_df <- res_df %>% 
+            mutate(significant = padj < 0.05 & abs(log2FoldChange) > 1)
+
+res_df %>% 
+  ggplot(aes(x = log2FoldChange, y = neg_log_10_padj,
+             color = significant)) +
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1) +
+  theme(legend.position = "none")
+
+# NOTE: all of the above can be achieved more efficiently by running the following
+res_df %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.05 & abs(log2FoldChange) > 1)) +
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1) +
+  theme(legend.position = "none")
+
+# Get gene names
+# Install biomaRt package
+BiocManager::install("biomaRt")
+library(biomaRt)
+
+# open vignettes
+browseVignettes("biomaRt") # we will use the first vignette as a guide for the code below
+
+# Step One: Connect to the selected BioMart database and dataset hosted by Ensembl
+ensembl <- useEnsembl(biomart = "genes", 
+                   dataset = "hsapiens_gene_ensembl")
+# how do we know what databases and datasets are available?
+# databases - 
+listEnsembl()
+
+# to see the datasets within the selected database - 
+listDatasets(ensembl)
+
+# Step Two: Retrieve gene names
+# build a biomaRt query
+# The getBM() function is the main query function in biomaRt
+gene_names <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"),
+                 values = res_df$ensembl,
+                 mart = ensembl)
+
+# how many missing gene names are there in `gene_names`
+gene_names %>% 
+  filter(external_gene_name == "") %>% 
+  nrow() # 21637!!
+
+# add these gene names to res
+# [add a slide on joins]
+res_df <- res_df %>% 
+              left_join(gene_names, by = c("ensembl" = "ensembl_gene_id"))
+```
+
+Next up - 
+- Enrichment Analyses (https://uclouvain-cbio.github.io/WSBIM2122/sec-gsea.html)
+
