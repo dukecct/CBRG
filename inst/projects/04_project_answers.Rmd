@@ -8,21 +8,33 @@ output: html_document
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-# install.packages(c("BiocManager", "remotes"))
+# Install CRAN packages
+installifnot <- function(pckgName){
+  if (!(require(pckgName, character.only = TRUE))) {
+    install.packages(pckgName, dep = TRUE)
+    require(pckgName, character.only = TRUE)
+  }
+}
+
+cran_pkgs <- c("BiocManager", "remotes", "tidyverse", "pheatmap")
+
+for (i in 1:length(cran_pkgs)){
+  installifnot(cran_pkgs[i])
+}
 
 # Install Bioconductor packages
-# installBiocifnot <- function(pckgName){
-#   if (!(require(pckgName, character.only = TRUE))) {
-#     BiocManager::install(pckgName)
-#     require(pckgName, character.only = TRUE)
-#   }
-# }
-# 
-# bioc_pkgs <- c("DESeq2", "UCLouvain-CBIO/rWSBIM2122")
-# 
-# for (i in 1:length(bioc_pkgs)){
-#   installBiocifnot(bioc_pkgs[i])
-# }
+installBiocifnot <- function(pckgName){
+  if (!(require(pckgName, character.only = TRUE))) {
+    BiocManager::install(pckgName)
+    require(pckgName, character.only = TRUE)
+  }
+}
+
+bioc_pkgs <- c("DESeq2", "UCLouvain-CBIO/rWSBIM2122", "genefilter", "biomaRt")
+
+for (i in 1:length(bioc_pkgs)){
+  installBiocifnot(bioc_pkgs[i])
+}
 
 # uncomment and run the above if you don't already have these packages installed
 # Load packages
@@ -107,7 +119,6 @@ pheatmap(sampleDistMatrix,
          clustering_distance_rows = sampleDists)
 
 # Plot heatmap of genes
-BiocManager::install("genefilter")
 library("genefilter")
 
 # The `genefilter` package contains the helpful `rowVars()` function
@@ -164,8 +175,6 @@ res_df %>%
   theme(legend.position = "none")
 
 # Get gene names
-# Install biomaRt package
-BiocManager::install("biomaRt")
 library(biomaRt)
 
 # open vignettes
@@ -196,7 +205,7 @@ gene_names %>%
 # add these gene names to res
 # [add a slide on joins]
 res_df <- res_df %>% 
-              left_join(gene_names, by = c("ensembl" = "ensembl_gene_id"))
+  left_join(gene_names, by = c("ensembl" = "ensembl_gene_id"))
 ```
 
 Next up - 
