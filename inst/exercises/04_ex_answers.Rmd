@@ -1,0 +1,90 @@
+---
+title: "Exercise Four (Answers)"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(DESeq2)
+library(tidyverse)
+#remotes::install_github("compgenomr/compGenomRData")
+# uncomment the line above if you DON'T already have this package installed
+```
+
+For this exercise, we will be using a subset of count data from a colorectal cancer study, as described here - 
+http://compgenomr.github.io/book/gene-expression-analysis-using-high-throughput-sequencing-technologies.html#computing-different-normalization-schemes-in-r
+
+First run all the code in the chunk below. This code prepares the `countData` and `colData` objects we will need to make a DESeqDataSet object  
+
+Run *all* of the code in the chunk below before attempting the subsequent questions
+
+```{r}
+counts_file <- system.file("extdata/rna-seq/SRP029880.raw_counts.tsv",
+                           package = "compGenomRData")
+coldata_file <- system.file("extdata/rna-seq/SRP029880.colData.tsv",
+                            package = "compGenomRData")
+
+counts <- as.matrix(read.table(counts_file, header = T, sep = '\t'))
+
+#remove the 'width' column
+countData <- as.matrix(subset(counts, select = c(-width)))
+#define the experimental setup 
+colData <- read.table(coldata_file, header = T, sep = '\t', 
+                      stringsAsFactors = TRUE)
+
+# run DESeq
+dds <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = colData,
+                              design = ~ group) 
+dds <- DESeq(dds)
+res <- results(dds,
+           contrast = c("group", "CASE", "CTRL"))
+```
+Q1. How would you make a PCA plot using the `dds` object? Remember to first `rlog` transform this object
+A1.
+```{r}
+rld <- rlogTransformation(dds)
+plotPCA(rld, intgroup = "group")
+```
+
+Q2. What does the plot above tell you?
+A2. There is good separation between the `CASE` and `CONTROL`. PC1 accounts for the large majority of total variance
+
+Q3. Plot a heatmap of the ten most variable genes
+A3.
+```{r}
+library("genefilter")
+topVarGenes <- head(order(rowVars(assay(rld)), decreasing = TRUE), 10)
+mat <- assay(rld)[topVarGenes, ]
+mat <- mat - rowMeans(mat)
+anno <- as.data.frame(rld$group)
+colnames(anno) <- "group"
+rownames(anno) <- colnames(mat)
+
+pheatmap(mat, annotation_col = anno)
+```
+
+Q4. Retrieve the Ensembl IDs for the gene names in `res_df`
+A4.
+```{r}
+library("biomaRt")
+res_df <- as_tibble(res, rownames = "gene_name") 
+
+ensembl <- useEnsembl(biomart = "genes", 
+                   dataset = "hsapiens_gene_ensembl")
+ensembl_ids <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"),
+                 values = res_df$gene_name,
+                 mart = ensembl)
+
+res_df <- res_df %>% 
+            left_join(ensembl_ids, by = c("gene_name" = "external_gene_name"))
+```
+
+
+
+
+
+
+
+

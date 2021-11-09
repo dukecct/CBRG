@@ -1,5 +1,5 @@
 ---
-title: "Class Four (Answers): Computational Biology Reading Group"
+title: "Class Four: Computational Biology Reading Group"
 author: "Your name"
 date: "Nov 10, 2021"
 output: html_document
@@ -96,17 +96,16 @@ sampleDists
 
 # Plot heatmap of samples
 # load the `pheatmap` package
-library(pheatmap)
+
 
 # convert `sampleDists` to a matrix. Call this new matrix object `sampleDistMatrix`
-sampleDistMatrix <- as.matrix(sampleDists)
-sampleDistMatrix
+
 
 # change the row names of `sampleDistMatrix` to be equal to the entries of `Condition`
-rownames(sampleDistMatrix) <- dds$Condition
+ <- dds$Condition
 
 # remove the column names of `sampleDistMatrix`
-colnames(sampleDistMatrix) <- NULL
+ <- NULL
 
 # plot heatmap of samples
 pheatmap(sampleDistMatrix)
@@ -122,18 +121,18 @@ topVarGenes <- head(order(rowVars(assay(rld)), decreasing = TRUE), 20)
 topVarGenes
 # these numbers refer to the indices of the top 20 most variable genes in `rld`
 # use these indices to create a matrix of the 20 most variable genes
-mat <- assay(rld)[topVarGenes, ]
+mat <- 
 
 # subtract the mean of each row from all the values in that row
 # hint - use `rowMeans()`
-mat <- mat - rowMeans(mat)
+mat <- 
 
 # create a dataframe that contains the values of `Condition`
-anno <- as.data.frame(colData(rld)[, "Condition"])
+anno <- 
 # clean up the column name of `anno`
-colnames(anno) <- "Condition"
+
 # make sure the rownames of `anno` match the colnames of `mat`
-rownames(anno) <- colnames(mat)
+
 anno
 
 # plot the heatmap
@@ -144,27 +143,16 @@ pheatmap(mat, annotation_col = anno)
 # Adding gene names
 res_df <- as_tibble(res, rownames = "ENSEMBL") # if we forget `rownames = `, we lose all the gene names!
 # Remove rows that have `NAs` in the `padj` column
-res_df <- res_df %>% 
-            drop_na(padj)
+
 
 # create a new column called neg_log_10_padj in `res_df`
-res_df <- res_df %>% 
-            mutate(neg_log_10_padj = -log10(padj))
+
 
 # create a new column called `significant` that contain a TRUE if the following condition is satisfied - 
 # padj < 0.05 & abs(log2FoldChange) > 1
 # and contains a FALSE if the condition is NOT satisfied
-res_df <- res_df %>% 
-            mutate(significant = padj < 0.05 & abs(log2FoldChange) > 1)
 
-res_df %>% 
-  ggplot(aes(x = log2FoldChange, y = neg_log_10_padj,
-             color = significant)) +
-  geom_point(size = 0.5) +
-  geom_hline(yintercept = -log10(0.05)) +
-  geom_vline(xintercept = 1) +
-  geom_vline(xintercept = -1) +
-  theme(legend.position = "none")
+
 
 # NOTE: all of the above can be achieved more efficiently by running the following
 res_df %>%
@@ -196,19 +184,15 @@ listDatasets(ensembl)
 # build a biomaRt query
 # The getBM() function is the main query function in biomaRt
 gene_names <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"),
-                 values = res_df$ensembl,
+                 values = ,
                  mart = ensembl)
 
 # how many missing gene names are there in `gene_names`
-gene_names %>% 
-  filter(external_gene_name == "") %>% 
-  nrow() # 21637!!
+
 
 # add these gene names to res
 res_df <- res_df %>% 
   left_join(gene_names, by = c("ensembl" = "ensembl_gene_id"))
-
-
 ```
 To see how a `left_join()` works - 
 https://github.com/gadenbuie/tidyexplain/blob/main/images/left-join.gif
