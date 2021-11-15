@@ -228,5 +228,14 @@ plotEnrichment(pathways.hallmark$HALLMARK_PI3K_AKT_MTOR_SIGNALING,
 # a highly downregulated pathway
 plotEnrichment(pathways.hallmark$HALLMARK_MITOTIC_SPINDLE, 
                ranks)
+
+# plot GSEA table
+pathways <- fgseaResTidy %>% 
+                  dplyr::filter(padj < 0.05 & NES > 0) %>% 
+                  pull(pathway)
+
+plotGseaTable(pathways.hallmark[pathways], 
+              ranks,
+              fgseaRes)
 ```
 
