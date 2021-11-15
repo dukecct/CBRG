@@ -109,6 +109,8 @@ resultsNames(dds)
 res_shrunk <- lfcShrink(dds, 
                         coef = "Condition_KD_vs_mock",
                         type = "apeglm") 
+# Here's a nice article on empirical Bayes estimation - http://varianceexplained.org/r/empirical_bayes_baseball/
+
 res_shrunk # Note: The test statistics have disappeared. WHY??
 # Compare the output of - 
 plotMA(res)
@@ -213,5 +215,18 @@ ggplot(fgseaResTidy, aes(reorder(pathway, NES), NES)) +
   labs(x = "Pathway", y = "Normalized Enrichment Score",
        title = "Hallmark pathways NES from GSEA") + 
   theme_minimal()
+
+# enrichment plots for specific pathways
+# a highly upregulated pathway
+plotEnrichment(pathways.hallmark$HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION, 
+               ranks)
+
+# an uninteresting pathway
+plotEnrichment(pathways.hallmark$HALLMARK_PI3K_AKT_MTOR_SIGNALING, 
+               ranks)
+
+# a highly downregulated pathway
+plotEnrichment(pathways.hallmark$HALLMARK_MITOTIC_SPINDLE, 
+               ranks)
 ```
 
