@@ -13,6 +13,7 @@ output:
       highlightLines: true
       countIncrementalSlides: false
 ---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, comment = "", cache = F,
                       fig.align = "center", out.width = "90%")
@@ -53,33 +54,81 @@ xaringanExtra::use_panelset()
 
 class: center, middle
 
-# Enirchment Analyses
+# Enrichment Analyses
 
 ---
-```{r echo = FALSE, out.height = 500}
-knitr::include_graphics("http://geneontology.org/assets/hexose-biosynthetic-process.png")
+
+# Gene Ontology (GO)
+
+```{r echo = FALSE, out.width = "90%"}
+knitr::include_graphics("../img/go.png")
 ```
-.footnote[geneontology.org]
+
+.footnote[
+
+geneontology.org
+
+]
+
 ---
+
 # Three GO Domains  
 
 --
-**Molecular Function (MF)** - functional activities 
+
+### **Molecular Function (MF)** 
+
+  - Functional activities 
 
 --
 
-**Biological Process (BP)** - larger biological role
+### **Biological Process (BP)** 
+
+  - Larger biological role
 
 --
 
-**Cellular Component (CC)** - cellular location
+### **Cellular Component (CC)** 
+
+  - Cellular location
+
 ---
-```{r echo = FALSE, out.height = 450, out.width = "100%"}
+
+# GO: "Hexose Biosynthetic Process"
+
+.center[
+
+```{r echo = FALSE, out.width = "55%"}
+knitr::include_graphics("http://geneontology.org/assets/hexose-biosynthetic-process.png")
+```
+
+]
+
+---
+
+# ORA
+
+### Fisher test
+
+### Hypergeometric test
+
+<br/>
+
+```{r echo = FALSE, out.width = "90%"}
+knitr::include_graphics("../img/ora_table.png")
+```
+
+---
+
+# GSEA
+
+```{r echo = FALSE, out.width = "90%"}
 knitr::include_graphics("https://www.pnas.org/content/pnas/102/43/15545/F1.large.jpg?width=800&height=600&carousel=1")
 ```
-.footnote[Subramanian (2005) *PNAS* 102 (43) 15545-15550]
----
 
+.footnote[
 
+Subramanian (2005) *PNAS* 102 (43) 15545-15550
 
+]
 
