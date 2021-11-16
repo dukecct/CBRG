@@ -197,6 +197,7 @@ head(ranks)
 
 # Load the pathways into a named list
 pathways.hallmark <- gmtPathways("data/h.all.v7.4.entrez.gmt.txt") # you can download this file from https://data.broadinstitute.org/gsea-msigdb/msigdb/release/7.4/
+
 pathways.hallmark
 
 # run fgsea with 1000 permutations
