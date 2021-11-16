@@ -111,7 +111,7 @@ res_shrunk <- lfcShrink(dds,
                         type = "apeglm") 
 # Here's a nice article on empirical Bayes estimation - http://varianceexplained.org/r/empirical_bayes_baseball/
 
-res_shrunk # Note: The test statistics have disappeared. WHY??
+res_shrunk 
 # Compare the output of - 
 plotMA(res)
 # and
@@ -168,7 +168,7 @@ go_ora <- enrichGO(gene = sig_genes,
                    universe = res_df$entrezgene_id,
                    OrgDb = org.Hs.eg.db,
                    ont = "MF",
-                   readable = TRUE) 
+                   readable = TRUE) # maps gene IDs to gene names
 head(go_ora)
 
 # Visualization
