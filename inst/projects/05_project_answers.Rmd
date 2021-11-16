@@ -169,6 +169,7 @@ sig_genes
 
 go_ora <- enrichGO(gene = sig_genes,
                    OrgDb = org.Hs.eg.db,
+                   #universe = as.character(res_df$entrezgene_id),
                    ont = "MF",
                    readable = TRUE) # maps gene IDs to gene names
 head(go_ora)
