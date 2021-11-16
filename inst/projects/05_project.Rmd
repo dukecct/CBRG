@@ -1,5 +1,5 @@
 ---
-title: "Class Five (Answers): Computational Biology Reading Group"
+title: "Class Five: Computational Biology Reading Group"
 author: "Your name"
 date: "Nov 17, 2021"
 output: html_document
