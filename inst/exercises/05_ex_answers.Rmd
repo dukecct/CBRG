@@ -1,0 +1,120 @@
+---
+title: "Exercise Five (Answers)"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(DESeq2)
+library(tidyverse)
+#remotes::install_github("compgenomr/compGenomRData")
+# uncomment the line above if you DON'T already have this package installed
+```
+
+For this exercise, we will be using a subset of count data from a colorectal cancer study, as described here - 
+http://compgenomr.github.io/book/gene-expression-analysis-using-high-throughput-sequencing-technologies.html#computing-different-normalization-schemes-in-r
+
+First run all the code in the chunk below. This code prepares the `countData` and `colData` objects we will need to make a DESeqDataSet object  
+
+Run *all* of the code in the chunk below before attempting the subsequent questions
+
+```{r}
+counts_file <- system.file("extdata/rna-seq/SRP029880.raw_counts.tsv",
+                           package = "compGenomRData")
+coldata_file <- system.file("extdata/rna-seq/SRP029880.colData.tsv",
+                            package = "compGenomRData")
+
+counts <- as.matrix(read.table(counts_file, header = T, sep = '\t'))
+
+#remove the 'width' column
+countData <- as.matrix(subset(counts, select = c(-width)))
+#define the experimental setup 
+colData <- read.table(coldata_file, header = T, sep = '\t', 
+                      stringsAsFactors = TRUE)
+
+# run DESeq
+dds <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = colData,
+                              design = ~ group) 
+dds <- DESeq(dds)
+res <- results(dds,
+           contrast = c("group", "CASE", "CTRL"))
+```
+Q1. Make an MA-plot using the `res` object. What does this plot tell you? What do the blue dots indicate
+A1. This plot shows the estimated fold change over average expression strength
+
+The blue dots represent genes that have an adjusted p-value less than 0.1
+```{r}
+plotMA(res)
+
+# This plot is (surprisingly) not noisy, so we'll skip lfcshrinkage
+# bonus points if you do this anyway
+```
+
+Q2. Convert `res` to a dataframe called `res_df`. Retrieve the Entrez IDs for the gene symbols in `res_df``
+A2.
+```{r}
+library("biomaRt")
+res_df <- as_tibble(res, rownames = "gene_symbol")
+
+ensembl <- useEnsembl(biomart = "genes", 
+                   dataset = "hsapiens_gene_ensembl")
+entrez_ids <- getBM(attributes = c("entrezgene_id", "external_gene_name"),
+                 values = res_df$gene_symbol,
+                 mart = ensembl)
+res_df <- res_df %>% 
+            left_join(entrez_ids, by = c("gene_symbol" = "external_gene_name"))
+
+```
+
+Q3. How many `NAs` are there in the `entrez_id` column of `res_df`? Remove these `NAs` from `res_df``
+A3.
+```{r}
+sum(is.na(res_df$entrezgene_id)) # 1344 missing values
+
+res_df <- res_df %>% 
+            drop_na(entrezgene_id)
+```
+
+Q4. Are all the Entrez IDs in `res_df` unique? Drop any repeats
+A4.
+```{r}
+length(unique(res_df$entrezgene_id)) # 18472
+nrow(res_df) # 18528
+
+# There are quite a few repeats
+res_df <- res_df %>% 
+            arrange(padj) %>% 
+            distinct(entrezgene_id, .keep_all = TRUE)
+
+# are all ENTREZ IDs unique?
+length(unique(res_df$entrezgene_id)) == nrow(res_df) # TRUE
+```
+
+Q5. Perform over-representation analysis using only genes with an adjusted p-value < 0.05, and the "CC" ontology. What is the most significant term?
+A5.
+```{r}
+library(clusterProfiler)
+library(org.Hs.eg.db)
+
+sig_genes <- res_df %>% 
+              filter(padj < 0.05) %>% 
+              pull(entrezgene_id)
+
+go_ora <- enrichGO(gene = sig_genes,
+                   OrgDb = org.Hs.eg.db,
+                   ont = "CC",
+                   readable = TRUE)
+
+head(go_ora, 1)
+
+# "collagen-containing extracellular matrix" is the top GO term
+```
+
+
+
+
+
+
+
