@@ -61,7 +61,7 @@ class: center, middle
 # Gene Ontology (GO)
 
 ```{r echo = FALSE, out.width = "90%"}
-knitr::include_graphics("../img/go.png")
+knitr::include_graphics("https://github.com/dukecct/CBRG/blob/main/inst/img/go.png?raw=true")
 ```
 
 .footnote[
@@ -105,21 +105,6 @@ knitr::include_graphics("http://geneontology.org/assets/hexose-biosynthetic-proc
 ]
 
 ---
-
-# ORA
-
-### Fisher test
-
-### Hypergeometric test
-
-<br/>
-
-```{r echo = FALSE, out.width = "90%"}
-knitr::include_graphics("../img/ora_table.png")
-```
-
----
-
 # GSEA
 
 ```{r echo = FALSE, out.width = "90%"}
