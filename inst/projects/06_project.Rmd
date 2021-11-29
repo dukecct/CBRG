@@ -1,0 +1,292 @@
+---
+title: "How to Perform RNA-seq analysis"
+author: "Your name"
+date: "Dec 01, 2021"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Install CRAN packages
+installifnot <- function(pckgName){
+  if (!(require(pckgName, character.only = TRUE))) {
+    install.packages(pckgName, dep = TRUE)
+    require(pckgName, character.only = TRUE)
+  }
+}
+
+cran_pkgs <- c("BiocManager", "remotes", "tidyverse")
+
+for (i in 1:length(cran_pkgs)){
+  installifnot(cran_pkgs[i])
+}
+
+# Install Bioconductor packages
+installBiocifnot <- function(pckgName){
+  if (!(require(pckgName, character.only = TRUE))) {
+    BiocManager::install(pckgName)
+    require(pckgName, character.only = TRUE)
+  }
+}
+
+bioc_pkgs <- c("DESeq2", "UCLouvain-CBIO/rWSBIM2122", "biomaRt", "org.Hs.eg.db", "clusterProfiler", "enrichplot")
+
+for (i in 1:length(bioc_pkgs)){
+  installBiocifnot(bioc_pkgs[i])
+}
+
+# Load packages
+library(rWSBIM2122)
+library(DESeq2)
+library(tidyverse)
+library(biomaRt)
+library(org.Hs.eg.db)
+library(clusterProfiler)
+library(enrichplot)
+```
+
+# Performing RNA-seq analysis using the DESeq2 package
+
+For this walk-through we will be using the same example (and much of the same code!) as in this chapter - https://uclouvain-cbio.github.io/WSBIM2122/sec-rnaseq.html
+
+For a basic intro to R and Dplyr, please watch this series of videos made by Duke's Center for Computational Thinking - https://warpwire.duke.edu/w/f0YGAA/
+
+To learn more about the DESeq2 package, please refer to this wonderful guide - http://master.bioconductor.org/packages/release/workflows/vignettes/rnaseqGene/inst/doc/rnaseqGene.html#exploratory-analysis-and-visualization
+
+# Load and Inspect Data 
+
+```{r load}
+# system.file() finds the location of the specified file in the specified package
+# load() then opens the specified file (`.rda` objects in this case) so that they appear in our global environment 
+load(system.file("extdata/deseq2/counts.rda",
+                  package = "rWSBIM2122"))
+load(system.file("extdata/deseq2/coldata.rda",
+                  package = "rWSBIM2122"))
+# you should now see two new objects in your Environment pane (top right-hand corner)
+
+# `coldata` is a small dataframe, so just type its name in the console and press enter to see its contents
+coldata
+
+# `counts` is a much larger object. How many rows and columns does it have?
+dim(counts)
+
+# Take a look at the first few rows of `counts`
+head(counts)
+
+# Looking at these two dataframes, what kind of analysis/comparison would you perform?
+```
+
+# Construct a DESeqDataSet object
+
+```{r dds}
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ Condition)
+
+# How do we learn more about this new function, DESeqDataSetFromMatrix() from the DESeq2 package
+?DESeq2::DESeqDataSetFromMatrix
+
+# take a look at this new `dds` object
+dds
+
+# `dds` is a new type formally known as an "S4 object"
+# S4 objects have slots that can be accessed by using the `@` symbol
+# to see our two original objects `coldata` and `counts`, we could run the following
+dds@colData
+head(dds@assays@data[[1]])
+
+# There are functions that allow us to access elements of `dds` in a more intuitive way
+# use the `counts()` function to access the original `counts` dataframe
+head(counts(dds))
+# we can also use the `assay()` function for this
+
+# use the `colData()` function to access the original (almost!) `coldata` dataframe
+colData(dds)
+```
+
+# Run DESeq2
+
+## Run DESeq and inspect results
+```{r deseq2}
+dds <- DESeq(dds)
+# this function does a lot!
+# let's ignore all of this for now and take a look at the results :)
+head(results(dds))
+```
+
+## Re-order levels and re-run DEseq
+```{r re-order}
+# Notice that the log2FoldChange has the "KD" group as the base comparison
+# why is this?
+dds$Condition
+class(dds$Condition)
+
+# `Condition` is a factor, meaning that it is a categorical variable, which is a variable that contains a fixed number of categories or groups that a given observation can belong to
+# The number of levels of a given factor refer to the number of categories this variable contains
+# The order of these levels determines how comparisons are made in statistical modeling
+# In the case of `Condition`, "KD" appears first and so is the base comparison group
+# To switch this order, we can run this - 
+coldata$Condition <- factor(coldata$Condition, levels = c("mock", "KD"))
+
+# check levels
+coldata$Condition
+# levels have been switched!
+
+# create dds object again
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ Condition) 
+
+# run DESeq again
+dds <- DESeq(dds)
+res <- results(dds)
+head(res)
+```
+
+## Visualize with MA-plot
+```{r ma-plot}
+# visualize results using plotMA()
+plotMA(res)
+```
+
+## Shrink log fold-changes for low-count genes
+```{r lfcshrink}
+res_shrunk <- lfcShrink(dds, 
+                        coef = "Condition_KD_vs_mock",
+                        type = "apeglm") 
+# Here's a nice article on empirical Bayes estimation - http://varianceexplained.org/r/empirical_bayes_baseball/
+
+plotMA(res_shrunk)
+# compare this plot with the previous one. How are they different?
+```
+
+## Convert to dataframe and clean results table
+```{r conv-and-clean}
+# convert to dataframe
+res_df <- as_tibble(res_shrunk, rownames = "ENSEMBL") # if we forget `rownames = `, we lose all the gene names!
+
+# How would you remove all the rows that have `NAs` for the `padj` column
+# We have a couple of options
+# clue -
+head(is.na(res_df$padj)) # gives us a bunch of TRUEs and FALSEs. We can use this to filter out the unwanted rows
+res_df_nona <- res_df %>% 
+                filter(!is.na(padj))
+
+# or we could use the `drop_na()` function
+res_df_nona <- res_df %>% 
+                  drop_na(padj)
+
+# how to verify that there are no missing values for `padj`?
+sum(is.na(res_df_nona$padj)) # this should be 0!
+
+res_df <- res_df_nona
+```
+
+## Make a Volcano Plot
+
+To learn how to use ggplot2, refer to this video - https://www.youtube.com/watch?v=WUwSVKasU9g
+```{r volcano}
+res_df %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.05 & abs(log2FoldChange) > 1)) +
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1) +
+  theme(legend.position = "none")
+```
+
+# Over-representation Analysis (ORA)
+
+For a more detailed explanation of enrichment analyses (including ORA and gene set enrichment analysis), please watch this video - https://youtu.be/ZgZKmAYm-LE
+
+## Retrieve Entrez IDs and Gene Symbols
+```{r entrez}
+# Get ENTREZ IDs
+# We'll need this for using the "org.Hs.eg.db" package
+# Step One: Connect to the selected BioMart database and dataset hosted by Ensembl
+ensembl <- useEnsembl(biomart = "genes", 
+                   dataset = "hsapiens_gene_ensembl")
+
+# Step Two: Retrieve gene names
+# build a biomaRt query
+# The getBM() function is the main query function in biomaRt
+ensembl_to_entrez <- getBM(attributes = c("ensembl_gene_id", "external_gene_name",
+                                            "entrezgene_id"),
+                             values = res_df$ENSEMBL,
+                             mart = ensembl)
+
+# Plan B in case there's a connection problem -
+# ensembl_to_entrez <- read_csv("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/ensembl_to_entrez.csv")
+
+# add this new info to res_df_nona
+res_df <- res_df %>% 
+            left_join(ensembl_to_entrez, by = c("ENSEMBL" = "ensembl_gene_id"))
+```
+
+## Clean `res_df`
+```{r res-df-clean}
+# remove rows with NAs in the columns in `entrezgene_id` and `padj`
+res_df <- res_df %>% 
+            drop_na(entrezgene_id, padj)
+
+# are all ENTREZ IDs unique?
+length(unique(res_df$entrezgene_id)) # 13711
+nrow(res_df) # 13730
+
+# drop duplicates
+res_df <- res_df %>% 
+            arrange(padj) %>% 
+            distinct(entrezgene_id, .keep_all = TRUE)
+
+# are all ENTREZ IDs unique?
+length(unique(res_df$entrezgene_id)) == nrow(res_df) # TRUE
+```
+
+## Perform ORA on desired subset
+```{r ora}
+# perform ORA
+# we need a vector of ENTREZ IDs for genes with padj values < 0.05
+sig_genes <- res_df %>% 
+              filter(padj < 0.05, log2FoldChange > 1) %>% 
+              pull(entrezgene_id)
+head(sig_genes)
+
+go_ora <- enrichGO(gene = as.character(sig_genes),
+                   OrgDb = org.Hs.eg.db,
+                   universe = as.character(res_df$entrezgene_id),
+                   ont = "MF",
+                   readable = TRUE) # maps gene IDs to gene names
+head(go_ora)
+
+# Visualization
+# dot plot
+go_ora %>% 
+  dotplot(showCategory = 30) + 
+  ggtitle("dotplot for ORA")
+```
+

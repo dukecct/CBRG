@@ -1,0 +1,133 @@
+---
+title: "Computational Biology Reading Group"
+subtitle: "<br/>CBRG"
+author: ""
+institute: "DMPI"
+date: "Dec 01, 2021"
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(kableExtra)
+library(xaringanExtra)
+library(janitor)
+library(xaringanthemer)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+style_mono_accent(
+  base_color = "#00539B",
+  header_font_google = google_font("Adobe Caslon"),
+  text_font_google   = google_font("Adobe Caslon", "300", "300i"),
+  code_font_google   = google_font("Fira Mono")
+)
+```
+
+```{r xaringanExtra-freezeframe, echo = FALSE, message = FALSE}
+options(htmltools.dir.version = FALSE)
+xaringanExtra::use_freezeframe()
+```
+
+```{r xaringanExtra-clipboard, echo=FALSE}
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+
+class: center, middle
+
+# Welcome! 
+
+---
+# Install R and RStudio
+
+Install R - https://www.r-project.org
+
+Install RStudio - https://www.rstudio.com/products/rstudio/download/
+
+---
+# Omics Data Analysis
+
+```{r, echo = FALSE, fig.cap = "Omics Data Analysis by Laurent Gatto", out.width = "100%"}
+knitr::include_url("https://uclouvain-cbio.github.io/WSBIM2122/index.html")
+```
+
+---
+class: center, middle
+
+# RNA-seq analysis
+
+---
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Summary_of_RNA-Seq.svg/1000px-Summary_of_RNA-Seq.svg.png)
+---
+# DESeq2 pipeline
+
+```{r echo = FALSE, out.height = 500}
+knitr::include_graphics("https://uclouvain-cbio.github.io/WSBIM2122/figs/deseq2_steps.png")
+```
+.footnote[Omics Data Analysis (Chapter 5)]
+---
+class: center, middle
+
+# Over-Representation Analysis (ORA)
+
+---
+
+# Gene Ontology (GO)
+
+```{r echo = FALSE, out.width = "90%"}
+knitr::include_graphics("https://github.com/dukecct/CBRG/blob/main/inst/img/go.png?raw=true")
+```
+
+.footnote[
+
+geneontology.org
+
+]
+
+---
+
+# Three GO Domains  
+
+--
+
+### **Molecular Function (MF)** 
+
+  - Functional activities 
+
+--
+
+### **Biological Process (BP)** 
+
+  - Larger biological role
+
+--
+
+### **Cellular Component (CC)** 
+
+  - Cellular location
+
+---
+
+# GO: "Hexose Biosynthetic Process"
+
+.center[
+
+```{r echo = FALSE, out.width = "55%"}
+knitr::include_graphics("http://geneontology.org/assets/hexose-biosynthetic-process.png")
+```
+
+]
+
+
