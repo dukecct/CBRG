@@ -39,7 +39,7 @@ installifnot <- function(pckgName){
   }
 }
 
-cran_pkgs <- c("BiocManager", "remotes", "tidyverse")
+cran_pkgs <- c("BiocManager", "remotes", "tidyverse", "plotly")
 
 for (i in 1:length(cran_pkgs)){
   installifnot(cran_pkgs[i])
@@ -67,13 +67,14 @@ library(biomaRt)
 library(org.Hs.eg.db)
 library(clusterProfiler)
 library(enrichplot)
+library(plotly)
 ```
 
 # Performing RNA-seq analysis using the DESeq2 package
 
 For this walk-through we will be using the same example (and much of the same code!) as in this chapter - https://uclouvain-cbio.github.io/WSBIM2122/sec-rnaseq.html
 
-For a basic intro to R and Dplyr, please watch this series of videos made by Duke's Center for Computational Thinking - https://warpwire.duke.edu/w/f0YGAA/
+For a basic intro to R and `dplyr`, please watch this series of videos made by Duke's Center for Computational Thinking - https://warpwire.duke.edu/w/f0YGAA/
 
 To learn more about the DESeq2 package, please refer to this wonderful guide - http://master.bioconductor.org/packages/release/workflows/vignettes/rnaseqGene/inst/doc/rnaseqGene.html#exploratory-analysis-and-visualization
 
@@ -286,7 +287,24 @@ head(go_ora)
 # Visualization
 # dot plot
 go_ora %>% 
-  dotplot(showCategory = 30) + 
+  dotplot(showCategory = 30) + # showCategory	= number of enriched terms to display
   ggtitle("dotplot for ORA")
+
+# or make your own plot!
+ora_plot_interactive <- go_ora@result %>%
+  dplyr::slice(1L:20L) %>% # show the first 20 enriched terms
+  dplyr::mutate(GeneRatio = sapply(GeneRatio, function(x) eval(parse(text = x)))) %>% # compute decimal ratios) %>%
+  # NOTE: Here we have switch from the pipe (%>%) to the "+" sign because ggplot2 only uses "+" (so far...)
+  ggplot(aes(x = reorder(ID, GeneRatio), 
+             y = GeneRatio, 
+             fill = p.adjust,
+             label = Description)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "Enriched Term",
+       y = "Gene Ratio") +
+  theme_minimal()
+
+plotly::ggplotly(ora_plot_interactive) # plotly CRAN package allows us to create interactive ggplot2 plots very easy!
 ```
 
