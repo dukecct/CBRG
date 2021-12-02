@@ -1,0 +1,373 @@
+---
+title: "Gatto Chapter 8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+BiocManager::install("QFeatures")
+BiocManager::install("msdata")
+
+library(tidyverse)
+library(rWSBIM2122)
+library(QFeatures)
+library(limma)
+library(msdata)
+library("factoextra")
+library("patchwork")
+library(plotly)
+```
+
+This file contains notes and codes for Ch 8 of Omics Data Analysis - https://uclouvain-cbio.github.io/WSBIM2122/sec-prot.html
+
+# 8.2 QFeatures
+
+As we have already discussed in the previous chapter, even though mass spectrometers acquire data for spectra/peptides, the biological entities of interest remain the proteins. As part of the data processing, we are thus required to aggregate low-level quantitative features into higher level data
+```{r}
+data(feat1)
+feat1
+
+# Extract the sample metadata using the colData() accessor (like you have previously done with SummarizedExperiment objects)
+colData(feat1)
+
+# Extract the first (and only) assay composing this QFeaures data using the [[ operator (as you have done to extract elements of a list) by using the assay’s index or name
+feat1[[1]]
+# or
+feat1[["psms"]]
+
+assay(feat1)
+# same as
+assay(feat1[[1]])
+
+# Extract the psms assay’s row data and quantitative values
+rowData(feat1[[1]])
+```
+
+# 8.3 Feature aggregation
+The central functionality of the QFeatures infrastructure is the aggregation of features into higher-level features while retaining the link between the different levels. This can be done with the aggregateFeatures() function
+
+The call below will
+
+- operate on the psms assay of the feat1 objects;
+- aggregate the rows the assay following the grouping defined in the peptides row data variables;
+- perform aggregation using the colMeans() function;
+- create a new assay named peptides and add it to the feat1 object.
+```{r}
+feat1 <- aggregateFeatures(feat1, i = "psms",
+                           fcol = "Sequence",
+                           name = "peptides",
+                           fun = colMeans)
+feat1
+assay(feat1[["peptides"]]) # sweet!
+
+# Aggregate the peptide-level data into a new protein-level assay using the colMedians() aggregation function
+
+feat1 <- aggregateFeatures(feat1, i = "peptides",
+                           fcol = "Protein",
+                           name = "proteins",
+                           fun = colMedians)
+feat1
+
+assay(feat1[["proteins"]])
+```
+
+8.4 Subsetting and filtering
+
+The link between the assays becomes apparent when we now subset the assays for protein A as shown below or using the subsetByFeature() function. This creates a new instance of class QFeatures containing assays with the expression data for protein, its peptides and their PSMs
+```{r}
+feat1["ProtA", , ]
+```
+
+The filterFeatures() function can be used to filter rows the assays composing a QFeatures object using the row data variables. We can for example retain rows that have a pval < 0.05, which would only keep rows in the psms assay because the pval is only relevant for that assay
+```{r}
+filterFeatures(feat1, ~ pval < 0.05)
+```
+
+*On the other hand, if we filter assay rows for those that localise to the mitochondrion, we retain the relevant protein, peptides and PSMs*
+```{r}
+filterFeatures(feat1, ~ location == "Mitochondrion")
+
+# Filter rows that do not localise to the mitochondrion
+filterFeatures(feat1, ~ location != "Mitochondrion")
+```
+
+# 8.5 Analysis Pipeline
+
+Quantitative proteomics data processing is composed of the following steps:
+
+- Data import
+- Exploratory data analysis (PCA)
+- Missing data management (filtering and/or imputation)
+- Data cleaning
+- Transformation and normalisation
+- Aggregation
+- Downstream analysis
+
+# 8.6 The CPTAC data
+
+The CPTAC spike-in study 6 (Paulovich et al. 2010Paulovich, Amanda G, Dean Billheimer, Amy-Joan L Ham, Lorenzo Vega-Montoto, Paul A Rudnick, David L Tabb, Pei Wang, et al. 2010. “Interlaboratory Study Characterizing a Yeast Performance Standard for Benchmarking LC-MS Platform Performance.” Mol. Cell. Proteomics 9 (2): 242–54.) combines the Sigma UPS1 standard containing 48 different human proteins that are spiked in at 5 different concentrations (conditions A to E) into a constant yeast protein background. The sample were acquired in triplicate on different instruments in different labs. 
+
+*We are going to start with a subset of the CPTAC study 6 containing conditions A and B for a single lab.*
+
+
+The peptide-level data, as processed by MaxQuant (Cox and Mann 2008Cox, J, and M Mann. 2008. “MaxQuant Enables High Peptide Identification Rates, Individualized p.p.b.-Range Mass Accuracies and Proteome-Wide Protein Quantification.” Nat Biotechnol 26 (12): 1367–72. https://doi.org/10.1038/nbt.1511.) is available in the msdata package:
+```{r}
+basename(f <- msdata::quant(pattern = "cptac", full.names = TRUE))
+```
+
+From the names of the columns, we see that the quantitative columns, starting with "Intensity." (note the dot!) are at positions 56 to 61
+```{r}
+names(read.delim(f))
+
+(i <- grep("Intensity\\.", names(read.delim(f)))) 
+prot_df <- read.delim(f) # NOTE: read_delim() will convert `.` to `_`!!!
+
+prot_df %>% 
+  dplyr::select(contains("Intensity") & contains("_")) %>% 
+  names() -> col_names
+
+
+```
+
+We now read these data using the readSummarizedExperiment function. This peptide-level expression data will be imported into R as an instance of class SummarizedExperiment. We also use the fnames argument to set the row-names of the peptides assay to the peptide sequences and specify that the file is a tab-separated table
+```{r}
+cptac_se <- readSummarizedExperiment(f, ecol = i, fnames = "Sequence", sep = "\t")
+# or
+cptac_se_alt <- readSummarizedExperiment(f, ecol = col_names, fnames = "Sequence", sep = "\t")
+?readSummarizedExperiment
+cptac_se
+colData(cptac_se) # nothing!
+dim(assay(cptac_se)) # 11466     6
+
+identical(cptac_se, cptac_se_alt) # TRUE!
+
+colnames(cptac_se)
+# [1] "Intensity.6A_7" "Intensity.6A_8" "Intensity.6A_9" "Intensity.6B_7" "Intensity.6B_8" "Intensity.6B_9"
+
+colnames(cptac_se) <- sub("I.+\\.", "", colnames(cptac_se))
+cptac_se$condition <- sub("_[7-9]", "", colnames(cptac_se))
+cptac_se$id <- sub("^.+_", "", colnames(cptac_se))
+colData(cptac_se) # NOW we have some colData
+
+dim(rowData(cptac_se)) # 11466    65
+# Keep only a subset of row data
+keep_var <- c("Sequence", "Proteins", "Leading.razor.protein", "PEP",
+              "Score", "Reverse", "Potential.contaminant")
+
+rowData(cptac_se) <- rowData(cptac_se)[, keep_var]
+```
+
+# 8.7 Missing Values
+
+Missing values can be highly frequent in proteomics. These exist two reasons supporting the existence of missing values, namely biological or technical.
+
+Values that are missing due to the absence (or extremely low contentration) of a protein are observed for biological reasons, *and their pattern aren’t random*. A protein missing in due to the suppression of its expression will not be missing at random: it will be missing in the condition in which it was suppressed, and be present in the condition where it is expressed.
+Due to it’s data-dependent acquisition, mass spectrometry isn’t capable to assaying all peptides in a sample. Peptides that are less abundant than some of their co-eluting ions, peptides that do not ionise well or peptides that do not get identified might be sporadically missing in the final quantitation table, despite their presence in the biological samples. *Their absence patterns are random in such cases*
+
+Often, third party software that produce quantiative data use zeros instead of properly reporting missing values. We can use the zeroIsNA() function to replace the 0 by NA values in our cptac_se object and then explore the missing data patterns across columns and rows
+
+**WAIT!! How do we know that ALL of these 0s are actually NAs???**
+```{r}
+cptac_se <- zeroIsNA(cptac_se)
+nNA(cptac_se)
+
+# Explore the number or proportion of missing values across peptides and samples of the cptac_se data
+# proportion
+barplot(nNA(cptac_se)$nNAcols$pNA)
+
+# number
+table(nNA(cptac_se)$nNArows$nNA)
+
+## remove rows that have 4 or more NAs out of 6
+cptac_se <- filterNA(cptac_se, pNA = 4/6)
+```
+
+# 8.8 Imputation
+
+Imputation is the technique of replacing missing data with probable values. This can be done with impute() method. As we have discussed above, there are however two types of missing values in mass spectrometry-based proteomics, namely data missing at random (MAR), and data missing not at random (MNAR). These two types of missing data need to be imputed with different types of imputation methods (Lazar et al. 2016Lazar, C, L Gatto, M Ferro, C Bruley, and T Burger. 2016. “Accounting for the Multiple Natures of Missing Values in Label-Free Quantitative Proteomics Data Sets to Compare Imputation Strategies.” J Proteome Res 15 (4): 1116–25. https://doi.org/10.1021/acs.jproteome.5b00981.)
+
+When downstream analyses permit, it might thus be safer not to impute data and deal explicitly with missing values. *This is possible when performing hypethesis tests, but not to perform a principal component analysis*
+
+# 8.9 Identification quality control
+
+As discussed in the previous chapter, PSMs are deemed relevant after comparison against hits from a decoy database. The origin of these hits is recorded with + in the Reverse variable:
+
+```{r}
+table(rowData(cptac_se)$Reverse)
+```
+
+Similarly, a proteomics experiment is also searched against a database of contaminants:
+```{r}
+table(rowData(cptac_se)$Potential.contaminant)
+# how is this determined??
+
+# Visualise the score distributions from forward and reverse hits and interpret the figure
+rowData(cptac_se) %>%
+    as_tibble() %>%
+    ggplot(aes(x = Score, colour = Reverse)) +
+    geom_density()
+
+# Do the same with the posterior probability score (PEP)
+rowData(cptac_se) %>%
+    as_tibble() %>%
+    ggplot(aes(x = PEP, colour = Reverse)) +
+    geom_density()
+
+# WHAT DOES THIS MEAN??
+```
+
+# 8.10 Creating the QFeatures data
+
+We can now create our QFeatures object using the SummarizedExperiment as show below
+
+```{r}
+cptac <- QFeatures(list(peptides = cptac_se))
+colData(cptac) # empty
+colData(cptac) <- colData(cptac_se)
+colData(cptac) # cool
+```
+
+# 8.11 Filtering out contaminant and reverse hits
+```{r}
+cptac <-
+    cptac %>%
+    filterFeatures(~ Reverse != "+") %>%
+    filterFeatures(~ Potential.contaminant != "+")
+# simple!
+```
+
+# 8.12 Log-transformation and normalization
+
+The two code chunks below log-transform and normalise using the assay i as input and adding a new one names as defined by name
+```{r}
+cptac <- logTransform(cptac, i = "peptides",
+                      name = "log_peptides")
+cptac <- normalize(cptac, i = "log_peptides",
+                   name = "lognorm_peptides", method = "quantiles")
+?normalize # how is this done?
+
+par(mfrow = c(1, 3))
+limma::plotDensities(assay(cptac[["peptides"]]))
+limma::plotDensities(assay(cptac[["log_peptides"]]))
+limma::plotDensities(assay(cptac[["lognorm_peptides"]]))
+
+cptac
+assay(cptac[["lognorm_peptides"]]) # very nice
+```
+
+# 8.13 Aggregations
+
+Below, we are going to use median aggregation, as a first attempt. This is however not the best choice, as we will see later
+```{r}
+cptac <-
+    aggregateFeatures(cptac,
+                      "lognorm_peptides",
+                      name = "proteins_med",
+                      fcol = "Leading.razor.protein",
+                      fun = colMedians,
+                      na.rm = TRUE)
+```
+
+Looking at the .n row variable computed during the aggregation, we see that most proteins result of the aggregation of 5 peptides or less, while very few proteins are accounted for by tens of peptides
+```{r}
+table(rowData(cptac[["proteins_med"]])$.n)
+```
+
+8.14 Principal component analysis
+
+```{r}
+pca_pep <-
+    cptac[["lognorm_peptides"]] %>%
+    filterNA() %>%
+    assay() %>%
+    t() %>%
+    prcomp(scale = TRUE, center = TRUE) %>%
+    fviz_pca_ind(habillage = cptac$condition, title = "Peptides")
+
+pca_prot <-
+    cptac[["proteins_med"]] %>%
+    filterNA() %>%
+    assay() %>%
+    t() %>%
+    prcomp(scale = TRUE, center = TRUE) %>%
+    fviz_pca_ind(habillage = cptac$condition,
+                 title = "Proteins (median aggregation)")
+
+pca_pep + pca_prot
+
+# Interpret the PCA plots above
+```
+
+# 8.15 Visualization
+
+Below, we use the longFormat() function to extract the quantitative and row data in a long format, that can be directly reused by the tidyverse tools
+
+```{r}
+longFormat(cptac["P02787ups|TRFE_HUMAN_UPS", ,
+                 c("lognorm_peptides", "proteins_med")]) %>%
+    as_tibble() %>%
+    mutate(condition = ifelse(grepl("A", colname), "A", "B")) %>%
+    ggplot(aes(x = colname, y = value, colour = rowname, shape = condition)) +
+    geom_point(size = 3) +
+    geom_line(aes(group = rowname)) +
+    facet_grid(~ assay) +
+    ggtitle("P02787ups|TRFE_HUMAN_UPS")
+```
+
+# 8.16 Statistical analysis
+
+```{r}
+prots <- cptac[["proteins_med"]]
+colData(prots) <- colData(cptac)
+assay(prots)
+colData(prots)
+
+design <- model.matrix(~ prots$condition)
+fit <- lmFit(assay(prots), design)
+fit <- eBayes(fit)
+
+res <-
+    topTable(fit, coef = "prots$condition6B", number = Inf) %>%
+    rownames_to_column("protein") %>%
+    as_tibble() %>%
+    mutate(TP = grepl("ups", protein)) # note this. replace with str_detect()
+
+# Note the warning about partial NA coefficients for 23 probes. Where could these come from?
+na_coefs <-
+    filter(res, is.na(t)) %>%
+    pull(protein)
+assay(prots[na_coefs, ]) # cool
+
+vp <-
+    res %>%
+    ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_point(aes(colour = TP)) +
+    geom_vline(xintercept = c(-1, 1)) +
+    geom_hline(yintercept = -log10(0.05)) +
+    scale_color_manual(values = c("black","red"))
+
+ggplotly(vp)
+```
+
+Using the pipeline described above, we would would identify a single differentially expressed protein at an 5 percent FDR but miss out the other 32 expected spike-in proteins. We can assess our results in terms of true/false postitves/negatives:
+
+True positives: 1
+False positives: 0
+True negatives: 1342
+False negatives: 32
+
+As shown below, it is possible to substantially improve these results using robust summarisation, i.e robust regression with M-estimation using Huber weights, as described in section 2.7 in (Sticker et al. 2019Sticker, Adriaan, Ludger Goeminne, Lennart Martens, and Lieven Clement. 2019. “Robust Summarization and Inference in Proteome-Wide Label-Free Quantification.” bioRxiv. https://doi.org/10.1101/668863.)
+
+WHERE'S THE CODE????
+Here!
+https://www.bioconductor.org/packages/release/bioc/vignettes/msqrob2/inst/doc/cptac.html#8_Comparison_of_performance
+
+And the corresponding paper - 
+https://www.biorxiv.org/content/10.1101/668863v1.full.pdf
+
+Maybe also show DEqMS??
+
+
+
+
+
