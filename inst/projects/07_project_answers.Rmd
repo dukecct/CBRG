@@ -134,6 +134,9 @@ LogC <- (qx[5] > 100) ||
 if (LogC) { ex[which(ex <= 0)] <- NaN
   exprs(gset) <- log2(ex) }
 View(exprs(gset)) # have the values been transformed?
+
+# how would you compare the distributions across the samples?
+boxplot(exprs(gset))
 ```
 
 # Differential expression analysis
