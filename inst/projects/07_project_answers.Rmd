@@ -1,0 +1,166 @@
+---
+title: "How to Perform Microarray Analysis (Answers)"
+author: "Your name"
+date: "Dec 07, 2021"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Install CRAN packages
+installifnot <- function(pckgName){
+  if (!(require(pckgName, character.only = TRUE))) {
+    install.packages(pckgName, dep = TRUE)
+    require(pckgName, character.only = TRUE)
+  }
+}
+
+cran_pkgs <- c("BiocManager", "remotes", "tidyverse")
+
+for (i in 1:length(cran_pkgs)){
+  installifnot(cran_pkgs[i])
+}
+
+# Install Bioconductor packages
+installBiocifnot <- function(pckgName){
+  if (!(require(pckgName, character.only = TRUE))) {
+    BiocManager::install(pckgName)
+    require(pckgName, character.only = TRUE)
+  }
+}
+
+bioc_pkgs <- c("GEOquery", "limma")
+
+for (i in 1:length(bioc_pkgs)){
+  installBiocifnot(bioc_pkgs[i])
+}
+
+# Load packages
+library(tidyverse)
+library(GEOquery)
+library(limma)
+```
+
+# Microarray Analysis in R
+
+The code in this walkthrough has been copy/pasted from the online tool GEO2R for  - 
+
+The GEO series used is GSE2431, and corresponds to this study - 
+
+Dhahbi JM, Mote PL, Fahy GM, Spindler SR. Identification of potential caloric restriction mimetics by microarray profiling. Physiol Genomics 2005 Nov 17;23(3):343-50. PMID: 16189280
+
+Briefly, this study sought to determine the effects of various late-in-life interventions thought to promote longevity (like calorie restriction and metformin treatment) on genome-wide expression in the liver. The authors were specifically interested in determining which of these various interventions was most similar to long-term calorie restriction (spoiler: it was metformin) 
+
+In the following analysis, we will just be comparing the control group (CON) with the long-term calorie restriction group (LTCR)  
+
+# load series and platform data from GEO
+
+```{r load-and-transform}
+gset <- getGEO("GSE2431", GSEMatrix = TRUE, AnnotGPL = TRUE)
+?getGEO
+
+class(gset) # [1] "list"
+
+if (length(gset) > 1) idx <- grep("GPL81", attr(gset, "names")) else idx <- 1
+gset <- gset[[idx]]
+
+class(gset)
+
+# "GSExxxxx" = "Series accession number". If the Series is associated with multiple Platforms (e.g. different chip types),
+# you will be asked to select the Platform of interest
+# Also, this changes the class from "list" to 
+# [1] "ExpressionSet"
+# attr(,"package")
+# [1] "Biobase"
+# and typeof() changes from "list" to "S4" object
+
+# make proper column names to match toptable 
+fvarLabels(gset)
+?fvarLabels
+fvarLabels(gset) <- make.names(fvarLabels(gset)) # # This step slightly changes the column names to match the toptable format
+fvarLabels(gset) # notice that the names have now been "cleaned up"
+
+# group membership for all samples
+# first take a look at the all samples in gset
+colnames(gset)
+# and to see the associated group identities - 
+gset@phenoData@data$title
+
+# select only those samples associated with CON and LTCR groups
+gsms <- "0000XXXXXXXXXXXX1111XXXXXXXXXXXX"
+sml <- strsplit(gsms, split="")[[1]]
+
+# filter out excluded samples (marked as "X")
+sel <- which(sml != "X")
+sml <- sml[sel] # this is done for a later step - line 142
+gset <- gset[ ,sel]
+
+colnames(gset)
+gset@phenoData@data$title
+
+# log2 transformation
+ex <- exprs(gset) # from `exprs` help section: exprs returns a (usually large!) matrix of expression values
+View(ex)
+qx <- as.numeric(quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm=T))
+LogC <- (qx[5] > 100) ||
+          (qx[6]-qx[1] > 50 && qx[2] > 0) # This is a way of checking if the data have ALREADY been log transformed.
+# For example, if `qx[5]` (the 99th quantile) really is greater than 100, then the anti-log value will be more than 2^100,
+# which is crazy! If this `qx[5]` really is greater than 100, then the data have likely not yet been log-transformed
+# This is GEO2R's "auto-detect feature" for determining if values have been log-transformed
+if (LogC) { ex[which(ex <= 0)] <- NaN
+  exprs(gset) <- log2(ex) }
+View(exprs(gset)) # have the values been transformed?
+```
+
+# Differential expression analysis
+```{r de-analysis}
+# assign samples to groups and set up design matrix
+gs <- factor(sml)
+groups <- make.names(c("0","1"))
+levels(gs) <- groups
+gset$group # NULL
+gset$group <- gs
+design <- model.matrix(~group, gset) # note the difference between this and GEO2R
+# here's a wonderful StatQuest video on design matrices - https://youtu.be/CqLGvwi-5Pc
+# for a thorough description of all of this, refer to the limma guide - 
+# https://www.bioconductor.org/packages/devel/bioc/vignettes/limma/inst/doc/usersguide.pdf
+colnames(design) <- levels(gs)
+
+fit <- lmFit(gset, design)  # fit linear model
+
+# compute statistics and table of top significant genes
+fit2 <- eBayes(fit2, 0.01)
+# here are two excellent descriptions of limma and empirical Bayes - 
+# https://online.stat.psu.edu/stat555/node/46/
+# https://youtu.be/QINX3cI7qgk
+tT <- topTable(fit2, adjust="fdr", sort.by="B", number = nrow(ex)) # note the slight difference between this and GEO2R code
+
+tT <- tT %>%
+         dplyr::select(ID, adj.P.Val, P.Value, t, B, logFC, Gene.symbol, Gene.title) %>% 
+         dplyr:: arrange(adj.P.Val)
+```
+
