@@ -114,7 +114,7 @@ sml <- strsplit(gsms, split="")[[1]]
 
 # filter out excluded samples (marked as "X")
 sel <- which(sml != "X")
-sml <- sml[sel] # this is done for a later step - line 142
+sml <- sml[sel] # this is done for a later step - line 152
 gset <- gset[ ,sel]
 
 colnames(gset)
