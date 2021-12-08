@@ -1,5 +1,5 @@
 ---
-title: "How to Perform Microarray Analysis (Answers)"
+title: "How to Perform Microarray Analysis"
 author: "Your name"
 date: "Dec 08, 2021"
 
@@ -134,15 +134,10 @@ if (LogC) { ex[which(ex <= 0)] <- NaN
 View(exprs(gset)) # have the values been transformed?
 
 # how would you compare the distributions across the samples?
-boxplot(exprs(gset))
+
 
 # and ggplot2 version
-exprs(gset) %>%
-  as_tibble(rownames = "gene") %>%
-  pivot_longer(cols = -gene) %>%
-  ggplot(aes(name, value)) +
-  geom_boxplot() +
-  theme_bw()
+
 ```
 
 # Differential expression analysis
