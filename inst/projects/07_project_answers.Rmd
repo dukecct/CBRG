@@ -31,38 +31,36 @@ output:
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-# Install CRAN packages
+cran_pkgs <- c(
+  "BiocManager",
+  "remotes",
+  "tidyverse"
+  )
+
+bioc_pkgs <- c(
+  "GEOquery",
+  "limma"
+  )
+
+# Install and load CRAN packages
 installifnot <- function(pckgName){
-  if (!(require(pckgName, character.only = TRUE))) {
-    install.packages(pckgName, dep = TRUE)
-    require(pckgName, character.only = TRUE)
-  }
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName)
+    }
 }
 
-cran_pkgs <- c("BiocManager", "remotes", "tidyverse")
+lapply(cran_pkgs, installifnot)
 
-for (i in 1:length(cran_pkgs)){
-  installifnot(cran_pkgs[i])
-}
-
-# Install Bioconductor packages
+# Install and load Bioconductor packages
 installBiocifnot <- function(pckgName){
-  if (!(require(pckgName, character.only = TRUE))) {
-    BiocManager::install(pckgName)
-    require(pckgName, character.only = TRUE)
-  }
+    if (!(require(pckgName, character.only = TRUE))) {
+        BiocManager::install(pckgName, ask = FALSE)
+        library(pckgName)
+    }
 }
 
-bioc_pkgs <- c("GEOquery", "limma")
-
-for (i in 1:length(bioc_pkgs)){
-  installBiocifnot(bioc_pkgs[i])
-}
-
-# Load packages
-library(tidyverse)
-library(GEOquery)
-library(limma)
+lapply(bioc_pkgs, installBiocifnot)
 ```
 
 # Microarray Analysis in R
@@ -77,7 +75,7 @@ Briefly, this study sought to determine the effects of various late-in-life inte
 
 In the following analysis, we will just be comparing the control group (CON) with the long-term calorie restriction group (LTCR)  
 
-# load series and platform data from GEO
+# Load series and platform data from GEO
 
 ```{r load-and-transform}
 gset <- getGEO("GSE2431", GSEMatrix = TRUE, AnnotGPL = TRUE)
@@ -108,7 +106,7 @@ fvarLabels(gset) # notice that the names have now been "cleaned up"
 # first take a look at the all samples in gset
 colnames(gset)
 # and to see the associated group identities - 
-gset@phenoData@data$title
+gset@phenoData@data$title # we use '@' to access the content of S3 and S4 objects
 
 # select only those samples associated with CON and LTCR groups
 gsms <- "0000XXXXXXXXXXXX1111XXXXXXXXXXXX"
@@ -137,9 +135,18 @@ View(exprs(gset)) # have the values been transformed?
 
 # how would you compare the distributions across the samples?
 boxplot(exprs(gset))
+
+# and ggplot2 version
+exprs(gset) %>%
+  as_tibble(rownames = "gene") %>%
+  pivot_longer(cols = -gene) %>%
+  ggplot(aes(name, value)) +
+  geom_boxplot() +
+  theme_bw()
 ```
 
 # Differential expression analysis
+
 ```{r de-analysis}
 # assign samples to groups and set up design matrix
 gs <- factor(sml)
@@ -147,23 +154,24 @@ groups <- make.names(c("0","1"))
 levels(gs) <- groups
 gset$group # NULL
 gset$group <- gs
-design <- model.matrix(~group, gset) # note the difference between this and GEO2R
+design <- model.matrix(~ group, gset) # note the difference between this and GEO2R
 # here's a wonderful StatQuest video on design matrices - https://youtu.be/CqLGvwi-5Pc
 # for a thorough description of all of this, refer to the limma guide - 
 # https://www.bioconductor.org/packages/devel/bioc/vignettes/limma/inst/doc/usersguide.pdf
 colnames(design) <- levels(gs)
 
-fit <- lmFit(gset, design)  # fit linear model
+fit <- limma::lmFit(gset, design)  # fit linear model
 
 # compute statistics and table of top significant genes
-fit2 <- eBayes(fit2, 0.01)
+fit2 <- limma::eBayes(fit, 0.01)
 # here are two excellent descriptions of limma and empirical Bayes - 
 # https://online.stat.psu.edu/stat555/node/46/
 # https://youtu.be/QINX3cI7qgk
-tT <- topTable(fit2, adjust="fdr", sort.by="B", number = nrow(ex)) # note the slight difference between this and GEO2R code
+# limma paper: https://pubmed.ncbi.nlm.nih.gov/25605792/
+tT <- limma::topTable(fit2, adjust = "fdr", sort.by = "B", number = nrow(ex)) # note the slight difference between this and GEO2R code
 
 tT <- tT %>%
-         dplyr::select(ID, adj.P.Val, P.Value, t, B, logFC, Gene.symbol, Gene.title) %>% 
-         dplyr:: arrange(adj.P.Val)
+  dplyr::select(ID, Gene.symbol, Gene.title, P.Value, adj.P.Val) %>% 
+  dplyr::arrange(adj.P.Val)
 ```
 
