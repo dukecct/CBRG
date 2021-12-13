@@ -1,0 +1,105 @@
+---
+title: "Data visualization from a QFeatures object"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(QFeatures)
+library(ComplexHeatmap)
+data(hlpsms)
+```
+
+link - https://rformassspectrometry.github.io/QFeatures/articles/Visualization.html
+
+# Data visualization from a QFeatures object
+
+This vignette describes how to visualize quantitative mass spectrometry data contained in a QFeatures object
+
+# Preparing the data
+
+```{r}
+hl <- readQFeatures(hlpsms, ecol = 1:10, name = "psms")
+hl <- aggregateFeatures(hl, "psms", "Sequence", name = "peptides", fun = colMeans)
+hl <- aggregateFeatures(hl, "peptides", "ProteinGroupAccessions", name = "proteins", fun = colMeans)
+
+hl$tag <- c("126", "127N", "127C", "128N", "128C", "129N", "129C",
+            "130N", "130C", "131")
+```
+
+# Exploring the QFeatures hierarchy
+
+QFeatures objects can contain several assays as the data goes through the processing workflow. The plot function provides an overview of all the assays present in the dataset, showing also the hierarchical relationships between the assays as determined by the AssayLinks
+
+```{r}
+plot(hl)
+
+# Error in as.double(y) : 
+#   cannot coerce type 'S4' to vector of type 'double'
+```
+
+# Basic data exploration
+
+The quantitative data is retrieved using assay(), the feature metadata is retrieved using rowData() on the assay of interest, and the sample metadata is retrieved using colData(). Once retrieved, the data can be supplied to the base R data exploration tools. Here are some examples:
+
+ - Plot the intensities for the first protein. These data are available from the proteins assay
+
+```{r}
+plot(assay(hl, "proteins")[1, ])
+```
+
+- Get the distribution of the number of peptides that were aggregated per protein. These data are available in the column .n from the protein rowData
+
+```{r}
+hist(rowData(hl)[["proteins"]]$.n)
+```
+
+- Get the count table of the different tags used for labeling the samples. These data are available in the column tag from the colData
+
+```{r}
+table(hl$tag)
+```
+
+# Using ggplot2
+
+```{r}
+df <- data.frame(rowData(hl)[["proteins"]])
+ggplot(df) +
+    aes(x = .n) +
+    geom_histogram()
+
+# heatmap
+Heatmap(matrix = assay(hl, "proteins"),
+        show_row_names = FALSE)
+
+ha <- rowAnnotation(markers = rowData(hl)[["proteins"]]$markers)
+Heatmap(matrix = assay(hl, "proteins"),
+        show_row_names = FALSE,
+        left_annotation = ha)
+```
+
+# Advanced data exploration
+
+In this section, we show how to combine in a single table different pieces of information available in a QFeatures object, that are quantitation data, feature metadata and sample metadata. The QFeatures package provides the longFormat function that converts a QFeatures object into a long table. Long tables are very useful when using ggplot2 for data visualization. For instance, suppose we want to visualize the distribution of protein quantitation (present in the proteins assay) with respect to the different acquisition tags (present in the colData) for each predicted cell location separately (present in the rowData of the assays). Furthermore, we link the quantitation values coming from the same protein using lines. This can all be plotted at once in a few lines of code
+
+```{r}
+lf <- longFormat(hl[, , "proteins"],
+                 rowvars = "markers",
+                 colvars = "tag")
+# Error in longFormat(hl[, , "proteins"], rowvars = "markers", colvars = "tag") : 
+#   unused arguments (rowvars = "markers", colvars = "tag")
+
+ggplot(data.frame(lf)) +
+    aes(x = tag,
+        y = value,
+        group = rowname) +
+    geom_line() +
+    facet_wrap(~ markers, scales = "free_y", ncol = 3)
+
+# interactive dashboard
+# definitely show this!
+display(hl)
+```
+

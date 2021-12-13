@@ -1,0 +1,323 @@
+---
+title: "Processing quantitative proteomics data with QFeatures"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(msdata)
+library(QFeatures)
+```
+
+# Processing quantitative proteomics data with QFeatures
+
+Source - https://bioconductor.org/packages/devel/bioc/vignettes/QFeatures/inst/doc/Processing.html
+
+# 1 Reading data as QFeatures
+
+We are going to use a subset of the CPTAC study 6 containing conditions A and B (Paulovich et al. 2010). The peptide-level data, as processed by MaxQuant (Cox and Mann 2008) is available in the msdata package:
+
+```{r}
+basename(f <- msdata::quant(pattern = "cptac", full.names = TRUE))
+
+?quant # takes you to the `proteomics()` function??
+# This function returns proteomics mass spectrometry files. These files are all stored in the proteomics directory in the msdata package. Each file/data is described in more details below
+```
+
+From the names of the columns, we see that the quantitative columns, starting with "Intensity." (note the dot!) are at positions 56 to 61
+
+```{r}
+names(read.delim(f))
+
+(i <- grep("Intensity\\.", names(read.delim(f))))
+
+```
+
+We now read these data using the readQFeatures function. The peptide level expression data will be imported into R as an instance of class QFeatures named cptac with an assay named peptides. We also use the fnames argument to set the row-names of the peptides assay to the peptide sequences.
+
+```{r}
+cptac <- readQFeatures(f, ecol = i, sep = "\t", name = "peptides", fnames = "Sequence")
+
+# inspecting cptac
+colData(cptac)
+# DataFrame with 6 rows and 0 columns
+
+colnames(assay(cptac))
+# [1] "Intensity.6A_7" "Intensity.6A_8" "Intensity.6A_9" "Intensity.6B_7" "Intensity.6B_8" "Intensity.6B_9"
+
+dim(assay(cptac)) # 11466     6
+
+View(rowData(cptac))
+# DataFrameList of length 1
+# names(1): peptides
+
+rowData(cptac)$peptides # wow
+# how do we make sense of all this??
+
+rowDataNames(cptac)$peptides # 65 columns, including "Reverse" and "Potenital.contaminant"
+
+unique(rowData(cptac)$peptides$Reverse) # ""  "+"
+# so we want to remove the peptides associated with a "+"
+# simple
+
+unique(rowData(cptac)$peptides$Potential.contaminant) # ""  "+"
+# same
+
+# What are "Reverse" and "Potential.contaminant?"
+# Reverse: Contains a “+” if the protein matches the reversed part of the decoy database.
+# 
+# Contaminant: Contains a “+” if the protein is a commonly occurring contaminant.
+
+# The above two definitions are from - https://www.bioconductor.org/packages/devel/bioc/vignettes/proDA/inst/doc/data-import.html
+
+# read some more about this
+
+```
+
+2 Encoding the experimental design
+
+Below we update the sample (column) annotations to encode the two groups, 6A and 6B, and the original sample numbers
+
+```{r}
+cptac$group <- rep(c("6A", "6B"), each = 3)
+cptac$sample <- rep(7:9, 2)
+colData(cptac)
+```
+
+3 Filtering out contaminant and reverse hits
+
+```{r}
+filterFeatures(cptac, ~ Reverse == "")
+# An instance of class QFeatures containing 1 assays:
+#  [1] peptides: SummarizedExperiment with 11436 rows and 6 columns 
+
+filterFeatures(cptac, ~ Potential.contaminant == "")
+# An instance of class QFeatures containing 1 assays:
+#  [1] peptides: SummarizedExperiment with 11385 rows and 6 columns 
+
+# filterFeatures() produces another QFeatures object, so all the usual functions are still applicable, e.g. assay()
+assay(filterFeatures(cptac, ~ Potential.contaminant == ""))
+
+?filterFeatures
+
+cptac <- cptac %>%
+    filterFeatures(~ Reverse == "") %>%
+    filterFeatures(~ Potential.contaminant == "")
+```
+
+# 4 Removing Unneeded Feature Variables
+
+The spreadsheet that was read above contained numerous variables that are returned by MaxQuant, but not necessarily necessary in the frame of a downstream statistical analysis
+
+The only ones that we will be needing below are the peptides sequences and the protein identifiers. Below, we store these variables of interest and filter them using the selectRowData function
+
+```{r}
+rowvars <- c("Sequence", "Proteins", "Leading.razor.protein")
+cptac <- selectRowData(cptac, rowvars)
+?selectRowData # takes you the QFeatures help page
+rowDataNames(cptac)
+
+# What's a razor peptide?
+# https://med.uottawa.ca/core-facilities/facilities/proteomic/resources/interpret-result
+
+# We group proteins sharing the same identified peptides together into one protein group. In one protein group, all proteins have the same or less number of the identified peptides. There is no point to list all proteins as separate items, because no more information would be provided. For example, protein A has four identified peptides; a,b,c and d, while protein B has peptide c and d. Protein A and B would be grouped together. The protein group assigning algorithm is actually much more complicated than our simple situation
+
+# What is a razor peptide?
+# A razor peptide is a peptide that has been assigned to the Protein Group with the largest number of total peptide identified (IDs). If the razor peptide is also unique it only matches to this single Protein Group. If it is not unique, it will only be a razor peptide for the group with the largest number of peptide IDs.
+# 
+# Let's say you have identified a peptide that matches to Protein Group A and Protein Group B. Let's assume that proteinGroup A is already identified with 5 additional peptides while proteinGroupB has not yet been identified with any peptide. So should you assign your peptide to group A or B (or both)? Occam's razor principle tells us that we should not make unnecessary assumptions. It is not necessary to assume that ProteinGroup B is present in your sample because you can explain all peptide IDs with the presence of proteinGroup A already. Your peptide is therefore assigned to proteinGroup A as a razor peptide. MaxQuant will also assign it to proteinGroupB for your information, but not as a razor peptide. Note however, that proteinGroupB will only show up in the proteinGroups file if it is also identified by at least one unique peptide (default settings in identify). In this way, MaxQuant will always generate the shortest proteinGroup list that is sufficient to explain all peptide IDs. Note that every peptide sequence is a razorpeptide for one proteinGroup only.
+```
+
+# 5 Managing Missing Values
+
+Missing values can be very numerous in certain proteomics experiments and need to be dealt with carefully. The first step is to assess their presence across samples and features. But before being able to do so, we need to replace 0 by NA, given that MaxQuant encodes missing data with a 0 using the zeroIsNA function
+```{r}
+?zeroIsNA
+# zeroIsNA(object, i) replaces all 0 in object by NA. This is often necessary when third-party software assume that features that weren't quantified should be assigned an intensity of 0
+cptac <- zeroIsNA(cptac, i = seq_along(cptac)) # ?
+nNA(cptac, i = seq_along(cptac)) # ?
+seq_along(cptac) # 1
+identical(nNA(cptac, i = 1), nNA(cptac, i = seq_along(cptac))) # TRUE
+# i = One or more indices or names of the assay(s) to be processed
+```
+
+The output of the nNA function tells us that
+
+- there are currently close to 50% is missing values in the data;
+- there are 4051 peptides with 0 missing values, 989 with a single missing values, … and 3014 peptides composed of only missing values; *HOW WAS THIS WORKED OUT?*
+- the range of missing values in the 6 samples is comparable and ranges between 4651 and 5470
+
+```{r}
+# show this in class
+nNA(cptac, i = seq_along(cptac))$nNArows %>% 
+  as_tibble() %>% 
+  dplyr::count(pNA)
+```
+
+In this dataset, we have such a high number of peptides without any data because the 6 samples are a subset of a larger dataset, and these peptides happened to be absent in groups A and B. Below, we use filterNA to remove all the peptides that contain one or more missing values by using pNA = 0 (which also is the default value)
+
+```{r}
+cptac <- filterNA(cptac, i = seq_along(cptac), pNA = 0)
+dim(assay(cptac)) # 4061 x 6
+```
+
+If we wanted to keep peptides that have up to 90% of missing values, corresponsing in this case to those that have only one value (i.e 5/6 percent of missing values), we could have set pNA to 0.9
+
+# 6 Counting unique features
+
+Counting the number of unique features across samples can be used for quality control or for assessing the identification efficiency between different conditions or experimental set-ups. countUniqueFeatures can be used to count the number of features that are contained in each sample of an assay from a QFeatures object. For instance, we can count the number of (non-missing) peptides per sample from the peptides assay. Note that the counts are automatically stored in the colData of cptac, under peptide_counts:
+
+```{r}
+cptac <- countUniqueFeatures(cptac, 
+                             i = "peptides", 
+                             colDataName = "peptide_counts") # i = 1 would give the same output, right?
+colData(cptac)
+```
+
+We can also count the number of unique proteins. We therefore need to tell countUniqueFeatures that we need to group by protein (the protein name is stored in the rowData under Proteins)
+
+```{r}
+cptac <- countUniqueFeatures(cptac, 
+                             i = "peptides",
+                             groupBy = "Proteins",
+                             colDataName = "protein_counts")
+colData(cptac)
+```
+
+countUniqueFeatures() does not exist!!
+
+# 7 Imputation
+
+The impute method can be used to perform missing value imputation using a variety of imputation methods. The method takes an instance of class QFeatures (or a SummarizedExperiment) as input, an a character naming the desired method (see ?impute for the complete list with details) and returns a new instance of class QFeatures (or SummarizedExperiment) with imputed data.
+
+As described in more details in (Lazar et al. 2016), there are two types of mechanisms resulting in missing values in LC/MSMS experiments.
+
+- Missing values resulting from absence of detection of a feature, despite ions being present at detectable concentrations. For example in the case of ion suppression or as a result from the stochastic, data-dependent nature of the MS acquisition method. These missing value are expected to be randomly distributed in the data and are defined as missing at random (MAR) or missing completely at random (MCAR).
+
+- Biologically relevant missing values, resulting from the absence of the low abundance of ions (below the limit of detection of the instrument). These missing values are not expected to be randomly distributed in the data and are defined as missing not at random (MNAR) 
+
+MAR and MCAR values can be reasonably well tackled by many imputation methods. MNAR data, however, requires some knowledge about the underlying mechanism that generates the missing data, to be able to attempt data imputation. MNAR features should ideally be imputed with a left-censor (for example using a deterministic or probabilistic minimum value) method. Conversely, it is recommended to use hot deck methods (for example nearest neighbour, maximum likelihood, etc) when data are missing at random
+
+It is anticipated that the identification of both classes of missing values will depend on various factors, such as feature intensities and experimental design. Below, we use perform mixed imputation, applying nearest neighbour imputation on the 654 features that are assumed to contain randomly distributed missing values (if any) (yellow on figure 1) and a deterministic minimum value imputation on the 35 proteins that display a non-random pattern of missing values (brown on figure 1)
+
+*WHAT??*
+
+# 8 Data Transformation
+
+When analysing continuous data using parametric methods (such as t-test or linear models), it is often necessary to log-transform the data. The figure below (left) show that how our data is mainly composed of small values with a long tail of larger ones, which is a typical pattern of quantitative omics data.
+
+Below, we use the logTransform function to log2-transform our data. This time, instead of overwriting the peptides assay, we are going to create a new one to contain the log2-transformed data
+
+```{r}
+cptac <- addAssay(cptac,
+                  logTransform(cptac[[1]]),
+                  name = "peptides_log")
+cptac
+
+seq_along(cptac) # 1 2
+
+par(mfrow = c(1, 2))
+limma::plotDensities(assay(cptac[[1]]))
+limma::plotDensities(assay(cptac[[2]]))
+# need to remove the legends!
+```
+
+# 9 Normalisation
+
+Assays in QFeatures objects can be normalised with the normalize function. The type of normalisation is defined by the method argument; below, we use quantile normalisation, store the normalised data into a new experiment, and visualise the resulting data
+
+```{r}
+cptac <- addAssay(cptac,
+                  normalize(cptac[["peptides_log"]], method = "center.median"),
+                  name = "peptides_norm")
+
+cptac
+
+par(mfrow = c(1, 2))
+limma::plotDensities(assay(cptac[["peptides_log"]]))
+limma::plotDensities(assay(cptac[["peptides_norm"]]))
+```
+
+# 10 Feature Aggregation
+
+At this stage, it is possible to directly use the peptide-level intensities to perform a statistical analysis (Goeminne, Gevaert, and Clement 2016), or aggregate the peptide-level data into protein intensities, and perform the differential expression analysis at the protein level.
+
+To aggregate feature data, we can use the aggregateFeatures function that takes the following inputs:
+
+- the name of the QFeatures instance that contains the peptide quantitation data - "cptac" in our example;
+- i: the name or index of the assay that contains the (normalised) peptide quantitation data - "peptides_norm" in our case;
+- fcol: the feature variable (in the assay above) to be used to define what peptides to aggregate - "Proteins" here, given that we want to aggregate all peptides that belong to one protein (group);
+- name: the name of the new aggregates assay - "proteins" in this case;
+- and finally fun, the function that will compute this aggregation - we will be using the default value, namely robustSummary (Sticker et al. 2019)
+
+```{r}
+cptac <- aggregateFeatures(cptac, i = "peptides_norm", fcol = "Proteins", name = "proteins")
+cptac
+
+?aggregateFeatures
+# default aggregation function is -
+# MsCoreUtils::robustSummary() to calculate a robust aggregation using MASS::rlm() (default)
+# there are also simpler functions available such as colMeans(), colMedians(), and colSums()
+
+# reference for rlm() details - 
+# https://www.biostat.jhsph.edu/~iruczins/teaching/jf/ch13.pdf
+
+# From this ref - 
+# Least squares works well when there are normal errors but can be upset by long-tailed errors. A conve- nient way to apply the Huber method is to apply the rlm() function which is part of the MASS (see the book Modern Applied Statistics in S+) which also gives standard errors. The default is to use the Huber method but there are other choices
+
+# This course also has some details on summarization approaches - 
+# https://statomics.github.io/PDA21/index.html
+```
+
+We obtain a final 1125 quantified proteins in the new proteins assay. Below, we display the quantitation data for the first 6 proteins and their respective variables. *The latter shown that number of peptides that were used during the aggregation step (.n column)* 
+
+```{r}
+head(assay(cptac[["proteins"]]))
+
+rowData(cptac[["proteins"]])
+```
+
+We can get a quick overview of this .n variable by computing the table below, that shows us that we have 405 proteins that are based on a single peptides, 230 that are based on two, 119 that are based on three, … and a single protein that is the results of aggregating 44 peptides 
+
+```{r}
+table(rowData(cptac[["proteins"]])$.n)
+```
+
+Let’s choose P02787ups|TRFE_HUMAN_UPS and visualise its expression pattern in the 2 groups at the protein and peptide level
+
+```{r}
+longFormat(cptac["P02787ups|TRFE_HUMAN_UPS", ]) %>%
+    as.data.frame() %>%
+    mutate(group = ifelse(grepl("A", colname), "A", "B")) %>%
+    mutate(sample = sub("Intensity\\.", "", colname)) %>%
+    ggplot(aes(x = sample, y = value, colour = rowname, shape = group)) +
+    geom_point() +
+    facet_grid(~ assay)
+
+# breaking down the above code
+cptac["P02787ups|TRFE_HUMAN_UPS", ]
+# An instance of class QFeatures containing 2 assays:
+#  [1] peptides_norm: SummarizedExperiment with 3 rows and 6 columns 
+#  [2] proteins: SummarizedExperiment with 1 rows and 6 columns 
+assays(cptac["P02787ups|TRFE_HUMAN_UPS", ])$peptides_norm # 18 values
+assays(cptac["P02787ups|TRFE_HUMAN_UPS", ])$proteins # 6 values
+
+# 18 and 6 add up to...
+
+longFormat(cptac["P02787ups|TRFE_HUMAN_UPS", ]) %>% as.data.frame() %>% View() # 24 values!
+
+longFormat(cptac["P02787ups|TRFE_HUMAN_UPS", ]) %>%
+    as.data.frame() %>%
+    mutate(group = ifelse(grepl("A", colname), "A", "B")) %>% View()
+
+longFormat(cptac["P02787ups|TRFE_HUMAN_UPS", ]) %>%
+    as.data.frame() %>%
+    mutate(group = ifelse(grepl("A", colname), "A", "B")) %>%
+    mutate(sample = sub("Intensity\\.", "", colname)) %>% View()
+
+# simple ;)
+```
+
+Done!!

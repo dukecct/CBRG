@@ -1,0 +1,208 @@
+---
+title: "Quantitative features for mass spectrometry data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(QFeatures)
+```
+
+link - https://rformassspectrometry.github.io/QFeatures/articles/QFeatures.html
+
+*NOTE*: I don't think this is the best vignette to show...
+Maybe as homework?
+
+# Quantitative features for mass spectrometry data
+
+The QFeatures package provides infrastructure (that is classes to store data and the methods to process and manipulate them) to manage and analyse quantitative features from mass spectrometry experiments. It is based on the SummarizedExperiment and MultiAssayExperiment classes. Assays in a QFeatures object have a hierarchical relation: proteins are composed of peptides, themselves produced by spectra, as depicted in figure @ref(fig:featuresplot). Throughout the aggregation and processing of these data, the relations between assays are tracked and recorded, thus allowing users to easily navigate across spectra, peptide and protein quantitative data
+
+![fig:featuresplot](https://rformassspectrometry.github.io/QFeatures/articles/QFeatures_files/figure-html/featuresplot-1.png)
+
+# Creating QFeatures object
+
+While QFeatures objects can be created manually (see ?QFeatures for details), most users will probably possess quantitative data in a spreadsheet or a dataframe. In such cases, the easiest is to use the readQFeatures function to extract the quantitative data and metadata columns. Below, we load the hlpsms dataframe that contains data for 28 PSMs from the TMT-10plex hyperLOPIT spatial proteomics experiment from (Christoforou et al. 2016). The ecol argument specifies that columns 1 to 10 contain quantitation data, and that the assay should be named psms in the returned QFeatures object, to reflect the nature of the data
+
+```{r}
+data(hlpsms)
+hl <- readQFeatures(hlpsms, ecol = 1:10, name = "psms")
+?readQFeatures
+# ecol - A numeric indicating the indices of the columns to be used as expression values
+hl
+
+# Below, we see that we can extract an assay using its index or its name. The individual assays are stored as SummarizedExperiment object and further access its quantitative data and metadata using the assay and rowData functions
+
+hl[[1]]
+# or
+hl[["psms"]]
+
+assay(hl)
+# or
+assays(hl)$psms
+
+dim(assays(hl)$psms) # 3010   10
+
+nrow(rowData(hl[[1]])) # 3010
+
+rowData(hl[[1]]) %>% 
+  as_tibble() %>% 
+  dplyr::select(Sequence) %>% 
+  distinct() %>% 
+  nrow() # 2923
+
+colData(hl) # DataFrame with 10 rows and 0 columns
+```
+
+As illustrated in figure @ref(fig:featuresplot), an central characteristic of QFeatures objects is the aggregative relation between their assays. This can be obtained with the aggregateFeatures function that will aggregate quantitative features from one assay into a new one. In the next code chunk, we aggregate PSM-level data into peptide by grouping all PSMs that were matched the same peptide sequence. Below, the aggregation function is set, as an example, to the mean. The new assay is named peptides
+
+```{r}
+hl <- aggregateFeatures(object = hl, 
+                        i = "psms", 
+                        fcol = "Sequence", 
+                        name = "peptides", 
+                        fun = colMeans)
+?aggregateFeatures
+# i = The index or name of the assay whose features will be aggregated
+# fcol = The feature variable of assay i defining how to summarise the features
+# name = A character(1) naming the new assay. Default is newAssay. Note that the function will fail if there's already an assay with name
+# fun = A function used for quantitative feature aggregation
+
+hl
+
+dim(assays(hl)$peptides) # 2923 10
+# note that this has fewer rows than "psms
+
+nrow(rowData(hl[["peptides"]])) # 2923
+
+rowData(hl[["peptides"]]) %>% 
+  as_tibble() %>% 
+  dplyr::select(ProteinGroupAccessions) %>% 
+  distinct() %>% 
+  nrow() # 1596
+```
+
+Below, we repeat the aggregation operation by grouping peptides into proteins as defined by the ProteinGroupAccessions variable
+
+```{r}
+hl <- aggregateFeatures(hl, "peptides", "ProteinGroupAccessions", name = "proteins", fun = colMeans)
+hl
+
+hl[["proteins"]]
+```
+
+The sample assayed in a QFeatures object can be documented in the colData slot. The hl data doens’t currently possess any sample metadata. These can be addedd as a new DataFrame with matching names (i.e. the DataFrame rownames must be identical assay’s colnames) or can be added one variable at at time, as shown below
+
+```{r}
+colData(hl)
+
+hl$tag <- c("126", "127N", "127C", "128N", "128C", "129N", "129C",
+            "130N", "130C", "131")
+colData(hl)
+```
+
+# Manipulating feature metadata
+
+The feature metadata, more generally referred to as rowData in the Bioconductor ecosystem, is specific to each assay in a QFeatures object. Therefore there are as many rowData tables as there are assays. rowDataNames provides a list where each element contains the name of the rowData columns available in the corresponding assay
+
+```{r}
+rowDataNames(hl)
+```
+
+In some cases, we are interested in extracting the rowData as a single data table. This is easily performed using the rbindRowData function. The function will automatically select the columns that are common to all selected assays
+
+```{r}
+rbindRowData(hl, i = c("peptides", "proteins"))
+# function not found!
+```
+
+We can also replace and add columns in the rowData. This requires to provide a List where the names of the List point to the assay to be updated and the elements of the List contain DataFrames with the replacement values. If the DataFrame contains a column that is not present in the rowData, that column will get added to the rowData. For instance, let’s add a rowData variables with the mean protein expression as well as the associated standard deviation. First, we need to create the DataFrame with the mean expression
+
+```{r}
+dF <- DataFrame(mean = rowSums(assay(hl[["proteins"]])),
+                sd = rowSds(assay(hl[["proteins"]])))
+
+dF
+
+rowData(hl) <- List(proteins = dF)
+
+# Error in (function (classes, fdef, mtable)  : 
+#   unable to find an inherited method for function ‘rowData<-’ for signature ‘"QFeatures"’
+```
+
+# Subsetting
+
+One particularity of the QFeatures infrastructure is that the features of the constitutive assays are linked through an *aggregative relation*. This relation is recorded when creating new assays with aggregateFeatures and is exploited when subsetting QFeature by their feature names
+
+In the example below, we are interested in the Stat3B isoform of the Signal transducer and activator of transcription 3 (STAT3) with accession number P42227-2. This accession number corresponds to a feature name in the proteins assay. But this protein row was computed from 8 peptide rows in the peptides assay, themselves resulting from the aggregation of 8 rows in the psms assay
+
+```{r}
+stat3 <- hl["P42227-2", , ]
+stat3
+
+# We can easily visualise this new QFeatures object using ggplot2 once converted into a data.frame
+stat3_df <- data.frame(longFormat(stat3))
+stat3_df
+
+stat3_df$assay <- factor(stat3_df$assay,
+                        levels = c("psms", "peptides", "proteins"))
+
+stat3_df %>% 
+  dplyr::filter(assay == "peptides") %>% 
+ggplot(aes(x = colname,
+           y = value,
+           group = rowname, # tells ggplot HOW to connect the dots in the plot
+           col = assay)) +
+    geom_line() + geom_point() 
+
+# The above can also be achieved by this - 
+hl %>%
+    subsetByFeature("P42227-2")
+
+hl %>%
+    subsetByFeature("P42227-2") %>%
+    longFormat() %>%
+    as.data.frame %>%
+    ggplot(aes(x = colname,
+               y = value,
+               group = rowname)) +
+    geom_line() +
+    facet_grid(~ assay) # sweet
+```
+
+# Filtering
+
+QFeatures is assays can also be filtered based on variables in their respective row data slots using the filterFeatures function. The filters can be defined using the formula interface or using AnnotationFilter objects from the AnnotationFilter package (Morgan and Rainer 2019). In addition to the pre-defined filters (such as SymbolFilter, ProteinIdFilter, … that filter on gene symbol, protein identifier, …), this package allows users to define arbitrary character or numeric filters using the VariableFilter
+
+```{r}
+mito_filter <- VariableFilter(field = "markers",
+                              value = "Mitochondrion",
+                              condition = "==")
+mito_filter
+
+qval_filter <- VariableFilter(field = "qValue",
+                              value = 0.001,
+                              condition = "<=")
+qval_filter
+```
+
+These filter can then readily be applied to all assays’ row data slots. The mito_filter will return all PSMs, peptides and proteins that were annotated as localising to the mitochondrion
+
+```{r}
+filterFeatures(hl, mito_filter)
+filterFeatures(hl, qval_filter)
+
+# very cool!
+```
+
+The qval_filter, on the other hand, will only return a subset of PSMs, because the qValue variable is only present in the psms assays. The q-values are only relevant to PSMs and that variable was dropped from the other assays
+
+The same filters can be created using the forumla interface:
+```{r}
+filterFeatures(hl, ~ markers == "Mitochondrion")
+filterFeatures(hl, ~ qValue <= 0.001)
+```
+
+
+
