@@ -45,7 +45,7 @@ bioc_pkgs <- c(
 installifnot <- function(pckgName){
     if (!(require(pckgName, character.only = TRUE))) {
         install.packages(pckgName, dep = TRUE)
-        library(pckgName)
+        library(pckgName, character.only = TRUE)
     }
 }
 
@@ -54,8 +54,8 @@ lapply(cran_pkgs, installifnot)
 # Install and load Bioconductor packages
 installBiocifnot <- function(pckgName){
     if (!(require(pckgName, character.only = TRUE))) {
-        BiocManager::install(pckgName, ask = FALSE)
-        library(pckgName)
+        BiocManager::install(pckgName)
+        library(pckgName, character.only = TRUE)
     }
 }
 
@@ -96,6 +96,7 @@ rowDataNames(feat1)
 ```
 
 # Feature aggregation
+
 ```{r}
 feat1 <- aggregateFeatures(object = feat1, 
                            i = "psms",
@@ -182,8 +183,8 @@ filterFeatures(feat1, ~ location == "Mitochondrion")
 filterFeatures(feat1, ~ location != "Mitochondrion")
 ```
 
-
 # Create a QFeatures object
+
 ```{r}
 data(hlpsms)
 hlpsms
@@ -197,5 +198,6 @@ hl
 
 # Take a look at what's in this object
 # Bonus: repeat what we did for feat1 using this object
+
 ```
 
