@@ -1,0 +1,86 @@
+---
+title: "Computational Biology Reading Group"
+subtitle: "<br/>CBRG"
+author: ""
+institute: "DMPI"
+date: "Dec 15, 2021"
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(kableExtra)
+library(xaringanExtra)
+library(janitor)
+library(xaringanthemer)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+style_mono_accent(
+  base_color = "#00539B",
+  header_font_google = google_font("Adobe Caslon"),
+  text_font_google   = google_font("Adobe Caslon", "300", "300i"),
+  code_font_google   = google_font("Fira Mono")
+)
+```
+
+```{r xaringanExtra-freezeframe, echo = FALSE, message = FALSE}
+options(htmltools.dir.version = FALSE)
+xaringanExtra::use_freezeframe()
+```
+
+```{r xaringanExtra-clipboard, echo=FALSE}
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+
+class: center, middle
+
+# Introduction to Proteomics Analysis
+
+---
+# Schedule  
+
+--
+- `QFeatures` object  
+
+--
+  
+- Advanced `QFeatures`
+
+--
+  
+- Differential Abundance 
+
+--
+  
+- POMA  
+--
+---
+```{r echo = FALSE, out.height = 500}
+knitr::include_graphics("https://www.future-science.com/cms/10.2144/05384TE01/asset/images/large/figure1.jpeg")
+```
+.footnote[Coon and Hunt 2005]
+---
+# `SummarizedExperiment`
+```{r echo = FALSE, out.height = 500}
+knitr::include_graphics("https://uclouvain-cbio.github.io/WSBIM2122/figs/SE.svg")
+```
+.footnote[Omics Data Analysis (Chapter 8)]
+---
+# `QFeatures` 
+```{r echo = FALSE, out.height = 500}
+knitr::include_graphics("https://rformassspectrometry.github.io/QFeatures/articles/QFeatures_files/figure-html/featuresplot-1.png")
+```
+---

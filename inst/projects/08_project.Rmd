@@ -1,0 +1,203 @@
+---
+title: "Introduction to Proteomics (Answers)"
+author: "Your name"
+date: "Dec 15, 2021"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "BiocManager",
+  "remotes",
+  "tidyverse"
+  )
+
+bioc_pkgs <- c(
+  "QFeatures"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+
+# Install and load Bioconductor packages
+installBiocifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        BiocManager::install(pckgName)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(bioc_pkgs, installBiocifnot)
+```
+
+# Getting to know QFeatures
+
+We will be storing our proteomics data in a `QFeatures` object, which is similar to a `SummarizedExperiment` object. In addition to Chapter 8 of Omics Data Analysis, you can find relevant information in the following vignette - 
+
+https://rformassspectrometry.github.io/QFeatures/articles/QFeatures.html
+
+```{r}
+# load a very simple data file
+data(feat1)
+feat1
+
+# Notice the similarity between this object and the SummarizedExperiment objects you encountered during the RNA-seq analysis meetups - https://youtu.be/-nv_r7pvgWs
+
+# Extract the sample metadata using the colData() accessor 
+colData(feat1)
+
+# Extract the first (and only) assay from this object
+feat1[[1]]
+# or
+feat1[["psms"]]
+
+# Extract assay data
+assay(feat1)
+
+# compare the output of `colData(feat1)` and `assay(feat1)`. How are they related?
+
+# Extract the psms assay’s row data and quantitative values
+rowData(feat1[[1]]) # or rowData(feat1[["psms"]])
+
+# To see the row data column names as a list
+rowDataNames(feat1)
+```
+
+# Feature aggregation
+
+```{r}
+feat1 <- aggregateFeatures(object = feat1, 
+                           i = "psms",
+                           fcol = "Sequence",
+                           name = "peptides",
+                           fun = colMeans)
+?aggregateFeatures
+feat1
+
+# Take a look at data in "peptides" assay
+assay(feat1[["peptides"]])
+
+# confirm that these means were correctly calculated
+# do just for sequence SYGFNAAR, which corresponds to the samples - PSM1, PSM2, and PSM3
+assay(feat1[["psms"]]) %>% 
+  as_tibble(rownames = "PSM") %>% 
+  dplyr::filter(PSM %in% c("PSM1", "PSM2", "PSM3")) %>% 
+  dplyr::summarise(mean(S1), mean(S2))
+
+# Aggregate the peptide-level data into a new protein-level assay using the colMedians() aggregation function
+
+feat1 <- aggregateFeatures(object = feat1, 
+                           i = "peptides",
+                           fcol = "Protein",
+                           name = "proteins",
+                           fun = colMedians)
+feat1
+
+assay(feat1[["proteins"]])
+```
+
+# Subsetting and filtering
+
+```{r}
+# Only keep information related to ProtA
+protA <- feat1["ProtA", , ]
+protA
+
+assay(protA[["psms"]])
+assay(protA[["peptides"]])
+assay(protA[["proteins"]])
+
+# We can easily visualise this new QFeatures object using ggplot2 once converted into a data.frame
+protA_df <- data.frame(longFormat(protA))
+protA_df
+
+protA_df$assay <- factor(protA_df$assay,
+                        levels = c("psms", "peptides", "proteins"))
+
+protA_df %>%
+  ggplot(aes(
+    x = colname,
+    y = value,
+    group = rowname, # tells ggplot HOW to connect the dots in the plot
+    col = assay
+  )) +
+  geom_line() + 
+  geom_point() +
+  facet_wrap(~ assay)
+
+# Alternatively
+feat1 %>% 
+  subsetByFeature("ProtA") %>% 
+  longFormat() %>%
+    as.data.frame %>%
+    ggplot(aes(x = colname,
+               y = value,
+               group = rowname,
+               col = assay)) +
+    geom_line() +
+    facet_grid(~ assay)
+
+# The filterFeatures() function can be used to filter rows using the row data variables. 
+# For example, use this function only retain rows that have pval < 0.05
+filterFeatures(feat1, ~ pval < 0.05)
+
+# Notice that the resulting object only has a subset of the "psms" assay, and has dropped the other two assays
+# This is because pval is only relevant to this assay
+
+# On the other hand, if we filter assay rows for those that localise to the mitochondrion, we retain the relevant protein, peptides and PSMs
+filterFeatures(feat1, ~ location == "Mitochondrion")
+
+# Filter rows that DO NOT localise to the mitochondrion
+filterFeatures(feat1, ~ location != "Mitochondrion")
+```
+
+# Create a QFeatures object
+
+```{r}
+data(hlpsms)
+hlpsms
+
+hl <- readQFeatures(table = hlpsms, 
+                    ecol = 1:10, 
+                    name = "psms")
+?readQFeatures
+
+hl
+
+# Take a look at what's in this object
+# Bonus: repeat what we did for feat1 using this object
+
+```
+
