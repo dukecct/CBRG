@@ -73,6 +73,11 @@ knitr::include_graphics("https://www.future-science.com/cms/10.2144/05384TE01/as
 ```
 .footnote[Coon and Hunt 2005]
 ---
+```{r echo = FALSE, out.height = 500}
+knitr::include_graphics("https://uclouvain-cbio.github.io/WSBIM2122/figs/SchematicMS2.png")
+```
+.footnote[Omics Data Analysis (Chapter 7)]
+---
 # `SummarizedExperiment`
 ```{r echo = FALSE, out.height = 500}
 knitr::include_graphics("https://uclouvain-cbio.github.io/WSBIM2122/figs/SE.svg")
