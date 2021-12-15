@@ -102,7 +102,7 @@ feat1 <- aggregateFeatures(object = feat1,
                            i = "psms",
                            fcol = "Sequence",
                            name = "peptides",
-                           fun = colMeans)
+                           fun = colSums)
 ?aggregateFeatures
 feat1
 
@@ -122,7 +122,7 @@ feat1 <- aggregateFeatures(object = feat1,
                            i = "peptides",
                            fcol = "Protein",
                            name = "proteins",
-                           fun = colMedians)
+                           fun = colSums)
 feat1
 
 assay(feat1[["proteins"]])
