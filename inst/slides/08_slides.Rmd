@@ -16,6 +16,7 @@ output:
 
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
+
 library(tidyverse)
 library(kableExtra)
 library(xaringanExtra)
@@ -33,7 +34,6 @@ style_mono_accent(
 ```
 
 ```{r xaringanExtra-freezeframe, echo = FALSE, message = FALSE}
-options(htmltools.dir.version = FALSE)
 xaringanExtra::use_freezeframe()
 ```
 
@@ -47,12 +47,14 @@ xaringanExtra::use_panelset()
 
 class: center, middle
 
-# Introduction to Proteomics Analysis
+# Introduction to Proteomics Data Analysis
 
 ---
+
 # Schedule  
 
 --
+
 - `QFeatures` object  
 
 --
@@ -61,31 +63,47 @@ class: center, middle
 
 --
   
-- Differential Abundance 
+- Differential abundance 
 
 --
   
-- POMA  
---
+- `POMA` Bioconductor package 
+
 ---
-```{r echo = FALSE, out.height = 500}
+
+# Proteomics Workflow
+
+```{r echo = FALSE, out.width = "95%", fig.align = 'center'}
 knitr::include_graphics("https://www.future-science.com/cms/10.2144/05384TE01/asset/images/large/figure1.jpeg")
 ```
+
 .footnote[Coon and Hunt 2005]
+
 ---
-```{r echo = FALSE, out.height = 500}
+
+# Proteomics Workflow
+
+```{r echo = FALSE, out.width = "100%", fig.align = 'center'}
 knitr::include_graphics("https://uclouvain-cbio.github.io/WSBIM2122/figs/SchematicMS2.png")
 ```
+
 .footnote[Omics Data Analysis (Chapter 7)]
+
 ---
+
 # `SummarizedExperiment`
-```{r echo = FALSE, out.height = 500}
+
+```{r echo = FALSE, out.width = "68%", fig.align = 'center'}
 knitr::include_graphics("https://uclouvain-cbio.github.io/WSBIM2122/figs/SE.svg")
 ```
+
 .footnote[Omics Data Analysis (Chapter 8)]
+
 ---
-# `QFeatures` 
-```{r echo = FALSE, out.height = 500}
+
+# `QFeatures`
+
+```{r echo = FALSE, out.width = "95%", fig.align = 'center'}
 knitr::include_graphics("https://rformassspectrometry.github.io/QFeatures/articles/QFeatures_files/figure-html/featuresplot-1.png")
 ```
----
+
