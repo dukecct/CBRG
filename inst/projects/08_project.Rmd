@@ -1,5 +1,5 @@
 ---
-title: "Introduction to Proteomics (Answers)"
+title: "Introduction to Proteomics"
 author: "Your name"
 date: "Dec 15, 2021"
 
