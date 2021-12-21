@@ -34,7 +34,9 @@ knitr::opts_chunk$set(echo = TRUE)
 cran_pkgs <- c(
   "BiocManager",
   "remotes",
-  "tidyverse"
+  "tidyverse",
+  "factoextra",
+  "patchwork"
   )
 
 bioc_pkgs <- c(
@@ -233,5 +235,4 @@ cptac <- aggregateFeatures(cptac,
                       na.rm = TRUE)
 cptac
 ```
-
 
