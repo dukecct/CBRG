@@ -146,7 +146,7 @@ identical(nNA(cptac, i = 1), nNA(cptac, i = seq_along(cptac))) # TRUE
 The output of the nNA function tells us that
 
 - there are currently close to 50% is missing values in the data;
-- there are 4051 peptides with 0 missing values, 989 with a single missing values, … and 3014 peptides composed of only missing values; *HOW WAS THIS WORKED OUT?*
+- there are 4051 peptides with 0 missing values, 989 with a single missing values, … and 3014 peptides composed of only missing values; *HOW WAS THIS WORKED OUT?* **See code chunk below**
 - the range of missing values in the 6 samples is comparable and ranges between 4651 and 5470
 
 ```{r}
@@ -174,6 +174,9 @@ cptac <- countUniqueFeatures(cptac,
                              i = "peptides", 
                              colDataName = "peptide_counts") # i = 1 would give the same output, right?
 colData(cptac)
+
+# Error in countUniqueFeatures(cptac, i = "peptides", colDataName = "peptide_counts") : 
+#   could not find function "countUniqueFeatures"
 ```
 
 We can also count the number of unique proteins. We therefore need to tell countUniqueFeatures that we need to group by protein (the protein name is stored in the rowData under Proteins)
@@ -184,6 +187,9 @@ cptac <- countUniqueFeatures(cptac,
                              groupBy = "Proteins",
                              colDataName = "protein_counts")
 colData(cptac)
+
+# Error in countUniqueFeatures(cptac, i = "peptides", colDataName = "peptide_counts") : 
+#   could not find function "countUniqueFeatures"
 ```
 
 countUniqueFeatures() does not exist!!

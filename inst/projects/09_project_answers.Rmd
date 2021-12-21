@@ -1,0 +1,237 @@
+---
+title: "Deeper into QFeatures (Answers)"
+author: "Your name"
+date: "Dec 22, 2021"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "BiocManager",
+  "remotes",
+  "tidyverse"
+  )
+
+bioc_pkgs <- c(
+  "QFeatures",
+  "msdata",
+  "limma"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+
+# Install and load Bioconductor packages
+installBiocifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        BiocManager::install(pckgName)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(bioc_pkgs, installBiocifnot)
+```
+
+# Getting even more familiar with QFeatures 
+
+In this walkthrough, we will become more familiar with the QFeatures object. Again, we will be using Chapter 8 of Omics Data Analysis as our guide - 
+https://uclouvain-cbio.github.io/WSBIM2122/sec-prot.html
+
+We will use data from the CPTAC spike-in study 6 (Paulovich et al. 2010) -
+
+"Interlaboratory study characterizing a yeast performance standard for benchmarking LC-MS platform performance"
+(https://pubmed.ncbi.nlm.nih.gov/19858499/)
+
+Peptide-level data were produced using MaxQuant (https://pubmed.ncbi.nlm.nih.gov/19029910/)
+MaxQuant is "an integrated suite of algorithms specifically developed for high-resolution, quantitative MS data"
+
+# Get the data
+```{r}
+f <- msdata::quant(pattern = "cptac", full.names = TRUE)
+# `f` tells us where we can find the cptac data
+
+# How many columns does this dataset contain?
+names(read.delim(f))
+# A LOT!
+
+# note that we use read.delim and NOT read_delim
+
+# For this walktrhough, we're only interested in the columns that have "Intensity." in their names
+# How do we extract these columns?
+# NOTE - there's also a column called "Intensity". We don't want this 
+
+# We can first either get the names of the desired columns
+prot_df <- read.delim(f)
+
+prot_df %>% 
+  dplyr::select(contains("Intensity") & contains("_")) %>% 
+  names() -> col_names
+# or we can get the column indices
+(i <- grep("Intensity.", names(read.delim(f)))) 
+
+# We're now ready to read the data in using the `readSummarizedExperiment()` function
+# We can either do this - 
+cptac_se <- readSummarizedExperiment(f, ecol = i, fnames = "Sequence", sep = "\t")
+# or
+cptac_se <- readSummarizedExperiment(f, ecol = col_names, fnames = "Sequence", sep = "\t")
+# The output is the same!
+# how do can we prove this?
+identical(readSummarizedExperiment(f, ecol = i, fnames = "Sequence", sep = "\t"), readSummarizedExperiment(f, ecol = col_names, fnames = "Sequence", sep = "\t")) # TRUE!
+
+?readSummarizedExperiment
+
+# Take a look at the cptac object
+# How many assays does it contain?
+cptac_se # contains 1 assay 
+
+# Take a look at its column data
+colData(cptac_se)
+
+# Take a look at the assay data
+head(assay(cptac_se))
+
+# Take a look at the row data
+# how many columns does this dataset contain?
+rowData(cptac_se)
+dim(rowData(cptac_se))
+
+# Create some column data
+cptac_se$group <- rep(c("6A", "6B"), each = 3)
+cptac_se$sample <- rep(7:9, 2)
+colData(cptac_se)
+
+# Keep only a subset of row data
+# "Sequence", "Leading.razor.protein", "Score", "Reverse", "Potential.contaminant"
+keep_var <- c("Sequence", "Leading.razor.protein", "Reverse", "Potential.contaminant")
+
+rowData(cptac_se) <- rowData(cptac_se)[, keep_var]
+rowData(cptac_se)
+```
+
+# Handling missing values
+```{r}
+cptac_se <- zeroIsNA(cptac_se)
+nNA(cptac_se) # this is a list, and lists can be tricky to handle
+
+# Explore the number or proportion of missing values across peptides and samples of the cptac data
+# proportion
+barplot(nNA(cptac_se)$nNAcols$pNA)
+
+# what is the ggplot way of doing this?
+nNA(cptac_se)$nNAcols$pNA %>% 
+  as_tibble() %>% 
+  rownames_to_column("sample") %>% 
+  ggplot(aes(sample, value)) +
+  geom_col()
+
+# number
+table(nNA(cptac_se)$nNArows$nNA)
+
+# what is the dplyr way of doing this?
+nNA(cptac_se)$nNArows %>% 
+  as_tibble() %>% 
+  dplyr::count(nNA)
+
+## remove rows that have 4 or more NAs out of 6
+cptac_se <- filterNA(cptac_se, pNA = 4/6)
+```
+
+# Create a QFeatures object
+```{r}
+cptac <- QFeatures(list(peptides = cptac_se))
+cptac
+colData(cptac) # empty
+colData(cptac) <- colData(cptac_se)
+colData(cptac) # not empty
+```
+
+# Quality Control
+```{r}
+# Filter out contaminants and reverse hits
+# First take a look at the row data of cptac again
+rowData(cptac[[1]])
+
+# how many unique values do the columns `Reverse` and `Potential.contaminant` contain?
+unique(rowData(cptac[[1]])$Reverse) # ""  "+"
+unique(rowData(cptac[[1]])$Potential.contaminant) # ""  "+"
+
+# A "+" means that the corresponding peptide is either a reverse hit or a contaminant 
+# We can use the `filterFeatures()` function to remove these
+filterFeatures(cptac, ~ Reverse != "+")
+filterFeatures(cptac, ~ Potential.contaminant != "+")
+
+cptac <- cptac %>%
+            filterFeatures( ~ Reverse != "+") %>%
+            filterFeatures( ~ Potential.contaminant != "+")
+```
+
+From the MaqQuant documentation (http://www.coxdocs.org/doku.php?id=maxquant:table:evidencetable) - 
+Reverse - When marked with '+', this particular peptide was found to be part of a protein derived from the reversed part of the decoy database. These should be removed for further data analysis
+Potential contaminant - When marked with '+', this particular peptide was found to be part of a commonly occurring contaminant. These should be removed for further data analysis
+
+What are "reverse" hits? 
+From  - https://bio.informatik.uni-jena.de/wp/wp-content/uploads/2014/09/book_handout_6.pdf
+
+"the truth is that we often measure spectra that do not stem from peptides and proteins in the analyzed sample"
+
+"We will refer to the peptide database that we use for searching, as the target database. The punchline of decoy database searching is: Create a second database, called decoy database, which looks similar to the target database, but only contains peptides which cannot be part of the sample. Combine both databases, and search in the combined database. Any PSM with a peptide from the decoy database must be spurious"
+
+Simple reasoning. Not so simple statistics :)
+
+# Log-transformation and normalization
+```{r}
+cptac <- logTransform(cptac, i = "peptides",
+                      name = "log_peptides")
+cptac <- normalize(cptac, i = "log_peptides",
+                   name = "lognorm_peptides", method = "quantiles")
+cptac
+
+limma::plotDensities(assay(cptac[["peptides"]]))
+limma::plotDensities(assay(cptac[["log_peptides"]]))
+limma::plotDensities(assay(cptac[["lognorm_peptides"]]))
+```
+
+# Aggregate data
+```{r}
+cptac <- aggregateFeatures(cptac,
+                      "lognorm_peptides",
+                      name = "proteins_med",
+                      fcol = "Leading.razor.protein",
+                      fun = colMedians,
+                      na.rm = TRUE)
+cptac
+```
+
+

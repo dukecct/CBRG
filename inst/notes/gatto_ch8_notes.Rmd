@@ -112,34 +112,37 @@ The CPTAC spike-in study 6 (Paulovich et al. 2010Paulovich, Amanda G, Dean Billh
 
 The peptide-level data, as processed by MaxQuant (Cox and Mann 2008Cox, J, and M Mann. 2008. “MaxQuant Enables High Peptide Identification Rates, Individualized p.p.b.-Range Mass Accuracies and Proteome-Wide Protein Quantification.” Nat Biotechnol 26 (12): 1367–72. https://doi.org/10.1038/nbt.1511.) is available in the msdata package:
 ```{r}
-basename(f <- msdata::quant(pattern = "cptac", full.names = TRUE))
+f <- msdata::quant(pattern = "cptac", full.names = TRUE)
+f
 ```
 
 From the names of the columns, we see that the quantitative columns, starting with "Intensity." (note the dot!) are at positions 56 to 61
 ```{r}
 names(read.delim(f))
 
-(i <- grep("Intensity\\.", names(read.delim(f)))) 
-prot_df <- read.delim(f) # NOTE: read_delim() will convert `.` to `_`!!!
+prot_df <- read.delim(f) # at this point, discuss why we're using this and not read_delim or read_tsv. Note that this is common source of error
+
+# note that we're just using prot_df to extract the relevant column names for later on
 
 prot_df %>% 
   dplyr::select(contains("Intensity") & contains("_")) %>% 
   names() -> col_names
-
-
+# also show "base R" way for the sake of comparison
+(i <- grep("Intensity\\.", names(read.delim(f)))) 
 ```
 
 We now read these data using the readSummarizedExperiment function. This peptide-level expression data will be imported into R as an instance of class SummarizedExperiment. We also use the fnames argument to set the row-names of the peptides assay to the peptide sequences and specify that the file is a tab-separated table
 ```{r}
 cptac_se <- readSummarizedExperiment(f, ecol = i, fnames = "Sequence", sep = "\t")
 # or
-cptac_se_alt <- readSummarizedExperiment(f, ecol = col_names, fnames = "Sequence", sep = "\t")
+cptac_se <- readSummarizedExperiment(f, ecol = col_names, fnames = "Sequence", sep = "\t")
 ?readSummarizedExperiment
+# fnames - optional character(1) or numeric(1) indicating the column to be used as feature names
+# you have to specify this otherwise your assay data will have no row names!
+
 cptac_se
 colData(cptac_se) # nothing!
 dim(assay(cptac_se)) # 11466     6
-
-identical(cptac_se, cptac_se_alt) # TRUE!
 
 colnames(cptac_se)
 # [1] "Intensity.6A_7" "Intensity.6A_8" "Intensity.6A_9" "Intensity.6B_7" "Intensity.6B_8" "Intensity.6B_9"
@@ -149,6 +152,11 @@ cptac_se$condition <- sub("_[7-9]", "", colnames(cptac_se))
 cptac_se$id <- sub("^.+_", "", colnames(cptac_se))
 colData(cptac_se) # NOW we have some colData
 
+# OR, just do this!!
+cptac_se$group <- rep(c("6A", "6B"), each = 3)
+cptac_se$sample <- rep(7:9, 2)
+colData(cptac_se)
+
 dim(rowData(cptac_se)) # 11466    65
 # Keep only a subset of row data
 keep_var <- c("Sequence", "Proteins", "Leading.razor.protein", "PEP",
@@ -156,6 +164,41 @@ keep_var <- c("Sequence", "Proteins", "Leading.razor.protein", "PEP",
 
 rowData(cptac_se) <- rowData(cptac_se)[, keep_var]
 ```
+
+What do these rowData terms mean?
+From the MaqQuant documentation (http://www.coxdocs.org/doku.php?id=maxquant:table:evidencetable) - 
+Proteins - The identifiers of the proteins this particular peptide is associated with
+Leading razor protein - The identifier of the best scoring protein, from the proteinGroups file this, this peptide is associated to
+Reverse - When marked with '+', this particular peptide was found to be part of a protein derived from the reversed part of the decoy database. These should be removed for further data analysis
+Potential contaminant - When marked with '+', this particular peptide was found to be part of a commonly occurring contaminant. These should be removed for further data analysis
+Score - Andromeda score for the best associated MS/MS spectrum
+For more on Andromeda - https://pubs.acs.org/doi/pdf/10.1021/pr101065j
+A key step in mass spectrometry (MS)-based proteomics is the identification of peptides in sequence databases by their fragmentation spectra. Here we describe Andromeda, a novel peptide search engine using a probabilistic scoring model.
+
+What are "reverse" hits? 
+From  - https://bio.informatik.uni-jena.de/wp/wp-content/uploads/2014/09/book_handout_6.pdf
+
+Quote this - 
+"the truth is that we often measure spectra that do not stem from peptides and proteins in the analyzed sample: These might be spectra where metabolites, glycans, or lipids are recorded instead of peptides; spectra that do not contain any real biomolecules but only “chemical noise”; or, spectra where we have recorded impurities in sample preparation such as the infamous Keratin"
+
+We find it very hard to decide if a particular hit is true or spurious.  can we produce a PSM that is necessarily spurious? This is much easier, as scoring the measured spectrum against any random peptide sequence, can only result in a hit that is necessarily spurious. In fact, there is a very small chance that the random peptide sequence is the true sequence; we will come back to this later. 
+
+We will refer to the peptide database that we use for searching, as the target database. The punchline of decoy database searching is: Create a second database, called decoy database, which looks similar to the target database, but only contains peptides which cannot be part of the sample. Combine both databases, and search in the combined database. Any PSM with a peptide from the decoy database must be spurious
+
+In detail, we want the decoy database to meet the following three conditions:
+
+1. There is no overlap between the decoy database and the target database: That is, peptides in the decoy database are not in the target database, and vice versa.
+2. The true peptide is not in the decoy database, so that any hit in the decoy database is a spurious hit.
+3. A wrong hit in the target database is as probable as a hit in the decoy database.
+
+The most commonly used methods to build a decoy databases are:
+
+Inverted proteins. We invert all target proteins, that is, read them from right to left. Then, we do in silico digestion to create the peptide decoy database.
+Inverted peptides. We invert all target peptides, generated from the target proteins by in silico digestion.
+Pseudo-inverted peptides. We invert target peptides but keep the last character in place, so s=s1...sl−1sl gets sl−1...s1sl.
+Random iid. We use the target database to estimate the relative frequency of each amino acid. We create a decoy database by, for each peptide of the target database, a random peptide of the same length is created, randomly drawn with the amino acid frequencies estimated above. Each character is drawn independently and with identical distribution (i.i.d.).
+Markov chain. Instead of drawing the letters independently, we can learn a Markov chain from the target database, and generate random peptides of identical length distribution as the target database using this Markov chain.
+Random iid plus. We learn two distributions from the peptide target database: One for all letters but the last, one for only the last letter of each peptide. We then generate decoy peptides according to these two distributions.
 
 # 8.7 Missing Values
 
@@ -175,8 +218,20 @@ nNA(cptac_se)
 # proportion
 barplot(nNA(cptac_se)$nNAcols$pNA)
 
+# what is the ggplot way of doing this?
+nNA(cptac_se)$nNAcols$pNA %>% 
+  as_tibble() %>% 
+  rownames_to_column("sample") %>% 
+  ggplot(aes(sample, value)) +
+  geom_col()
+
 # number
 table(nNA(cptac_se)$nNArows$nNA)
+
+# what is the dplyr way of doing this?
+nNA(cptac_se)$nNArows %>% 
+  as_tibble() %>% 
+  dplyr::count(nNA)
 
 ## remove rows that have 4 or more NAs out of 6
 cptac_se <- filterNA(cptac_se, pNA = 4/6)
@@ -206,6 +261,7 @@ rowData(cptac_se) %>%
     as_tibble() %>%
     ggplot(aes(x = Score, colour = Reverse)) +
     geom_density()
+# Higher Andromeda scores for the peptides NOT matched to decoy database
 
 # Do the same with the posterior probability score (PEP)
 rowData(cptac_se) %>%
@@ -245,6 +301,7 @@ cptac <- logTransform(cptac, i = "peptides",
 cptac <- normalize(cptac, i = "log_peptides",
                    name = "lognorm_peptides", method = "quantiles")
 ?normalize # how is this done?
+cptac
 
 par(mfrow = c(1, 3))
 limma::plotDensities(assay(cptac[["peptides"]]))
@@ -282,7 +339,7 @@ pca_pep <-
     assay() %>%
     t() %>%
     prcomp(scale = TRUE, center = TRUE) %>%
-    fviz_pca_ind(habillage = cptac$condition, title = "Peptides")
+    fviz_pca_ind(habillage = cptac$sample, title = "Peptides")
 
 pca_prot <-
     cptac[["proteins_med"]] %>%
@@ -290,8 +347,11 @@ pca_prot <-
     assay() %>%
     t() %>%
     prcomp(scale = TRUE, center = TRUE) %>%
-    fviz_pca_ind(habillage = cptac$condition,
+    fviz_pca_ind(habillage = cptac$sample,
                  title = "Proteins (median aggregation)")
+# center - a logical value indicating whether the variables should be shifted to be zero centered
+# scale - a logical value indicating whether the variables should be scaled to have unit variance before the analysis takes place
+# habillage - an optional factor variable for coloring the observations by groups
 
 pca_pep + pca_prot
 
