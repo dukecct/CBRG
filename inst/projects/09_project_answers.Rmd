@@ -34,9 +34,7 @@ knitr::opts_chunk$set(echo = TRUE)
 cran_pkgs <- c(
   "BiocManager",
   "remotes",
-  "tidyverse",
-  "factoextra",
-  "patchwork"
+  "tidyverse"
   )
 
 bioc_pkgs <- c(
