@@ -114,18 +114,17 @@ identical(readSummarizedExperiment(f, ecol = i, fnames = "Sequence", sep = "\t")
 
 # Take a look at the cptac object
 # How many assays does it contain?
-cptac_se # contains 1 assay 
+
 
 # Take a look at its column data
-colData(cptac_se)
+
 
 # Take a look at the assay data
-head(assay(cptac_se))
+
 
 # Take a look at the row data
 # how many columns does this dataset contain?
-rowData(cptac_se)
-dim(rowData(cptac_se))
+
 
 # Create some column data
 cptac_se$group <- rep(c("6A", "6B"), each = 3)
@@ -150,19 +149,13 @@ nNA(cptac_se) # this is a list, and lists can be tricky to handle
 barplot(nNA(cptac_se)$nNAcols$pNA)
 
 # what is the ggplot way of doing this?
-nNA(cptac_se)$nNAcols$pNA %>% 
-  as_tibble() %>% 
-  rownames_to_column("sample") %>% 
-  ggplot(aes(sample, value)) +
-  geom_col()
+
 
 # number
 table(nNA(cptac_se)$nNArows$nNA)
 
 # what is the dplyr way of doing this?
-nNA(cptac_se)$nNArows %>% 
-  as_tibble() %>% 
-  dplyr::count(nNA)
+
 
 ## remove rows that have 4 or more NAs out of 6
 cptac_se <- filterNA(cptac_se, pNA = 4/6)
