@@ -1,5 +1,5 @@
 ---
-title: "The Role of Serendipity"
+title: "The Role of Serendipity (Answers)"
 author: "Your name"
 date: "Jan 19, 2021"
 
@@ -198,7 +198,9 @@ cr_v_al_ptm <- cr_v_al %>%
                   unite("PTM", Substrate.Gene:Substrate.Mod, sep = " ") 
 
 # What are the 7 most popular Kinases?
-
+cr_v_al_ptm %>% 
+  count(Kinase.Gene) %>% 
+  arrange(desc(n))
 ```
 
 ## Make Plot
