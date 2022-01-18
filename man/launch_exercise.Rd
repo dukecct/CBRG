@@ -2,22 +2,30 @@
 % Please edit documentation in R/launch_exercise.R
 \name{launch_exercise}
 \alias{launch_exercise}
-\title{Launch Rmd files for homework}
+\title{Launch .Rmd files for exercises}
 \usage{
-launch_exercise(class = 1, show_answers = FALSE, testing = FALSE)
+launch_exercise(exercise = 1, show_answers = FALSE, testing = FALSE)
 }
 \arguments{
-\item{class}{enter the relevant class number (as an int). Opens the corresponding Rmd file in RStudio.}
+\item{show_answers}{Logical (default == FALSE). If this parameter is set to TRUE, answers will be shown in the .Rmd file.}
 
-\item{show_answers}{enter TRUE or FALSE (default is FALSE). Opens the corresponding Rmd file WITH ANSWERS in RStudio.}
+\item{testing}{Logical (default == FALSE). Appropriate path is selected depending on what environment the package is runing in. USERS CAN IGNORE.}
 
-\item{testing}{enter TRUE or FALSE (default is FALSE). Appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE.}
+\item{project}{Integer indicating the relevant exercise number.}
+}
+\value{
+Opens the corresponding .Rmd file in RStudio (with or without answers).
 }
 \description{
-This function launches the named class Rmd file
+This function launches the named exercise .Rmd file
+}
+\examples{
+# Exercise Number 1
+launch_exercise(exercise = 1)
+
+# Exercise Number 1 with Answers
+launch_exercise(exercise = 1, show_answers = TRUE)
 }
 \author{
-Akshay Bareja
-
-Pol Castellano
+Akshay Bareja, Pol Castellano-Escuder
 }

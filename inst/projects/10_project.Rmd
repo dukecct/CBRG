@@ -1,0 +1,183 @@
+---
+title: "The Role of Serendipity"
+author: "Your name"
+date: "Jan 19, 2021"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "remotes",
+  "tidyverse",
+  "ggrepel",
+  "ggforce"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+
+remotes::install_github("hirscheylab/tidybiology", force = TRUE)
+library(tidybiology)
+```
+
+# Chromosome Plot
+
+## Import data
+I first loaded chromosome summary data, which was originally scraped from [a Wikipedia entry about the human chromosome](https://en.wikipedia.org/wiki/Human_chromosome).  
+```{r import, include=FALSE}
+#data(package = "tidybiology")
+data(chromosome)
+#View(chromosome)
+#add some new variables; went back to add these after EDA below.
+chromosome <- chromosome %>% 
+  mutate(percent_var = variations/basepairs) %>% #this adds a new column called percent_var to calculate the number of variations/basepairs
+  mutate(xy = if_else(str_detect(id, "X") | str_detect(id, "Y"), TRUE, FALSE))  #adds a boolean for whether this is an XY chromosome or not to call them out in the graph
+```
+
+## Take a `glimpse` into the data in the dataframe
+Next, I found this table has 14 variables and 24 observations (22 numbered chromosomes + X and Y).
+```{r glimpse, echo=FALSE}
+glimpse(chromosome)
+```
+  
+## EDA
+I began to explore the relationship between number of protien codeing genes and number of base pairs. Perhaps not surprising, generally longer chromosomes have more protein coding genes. But that made me curious about variation.
+```{r echo=FALSE}
+ggplot(chromosome, aes(x = protein_codinggenes, y = basepairs)) +
+  geom_smooth(formula = y ~ x, method = lm, se = TRUE) +
+  geom_point(color = "darkblue", size = 3) +
+  labs(x = "Protine Coding Genes (#)", y = "Basepairs (Millions)", title = "Longer chromosomes have more protein coding genes in humans", subtitle = "Number of basepairs compared to protein coding genes for each chromosome", caption = "Data from Wikipedia | Plot from @matthewhirschey") +
+  scale_y_continuous(labels = c(100, 150, 200, 250)) +
+  geom_text_repel(aes(label = id)) +
+  theme_minimal() +
+  NULL
+#variation EDA
+chromosome %>% mutate(percent_var = variations/basepairs) %>% select(id, percent_var) %>% arrange(percent_var)
+#Y chromosome has much* less variation. Let's see what this looks like...
+```
+  
+## EDA Graph  
+I chose to investigate the relationship between the number of basepairs and the amount of variation on each human chromosome. 
+```{r echo=FALSE}
+ggplot(chromosome, aes(x = basepairs, y = variations)) +
+  geom_point(size = 3) +
+  geom_smooth(formula = y ~ x, method = lm) +
+  #labs(x = "Number of Basepairs", y = "Number of Genomic Variants", title = "Genomic Variaion is lowest on the human X and Y chromosomes", subtitle = "Comparison ", caption = "Data from Wikipedia | Plot from @hirscheylab") +
+  theme_minimal() +
+  #scale_y_continuous(labels = c(50, 100, 150, 200, 250)) +
+  geom_text_repel(aes(label = id)) +
+  NULL
+```
+  
+**The X and Y chromosomes are clearly lower, but how to visualize this?**  
+  
+## Final Graph
+I chose the lollipop plot method to visualize the difference between each chromosome's variation compared to the mean variation
+```{r final_graph, echo=FALSE}
+#autocalc mean variation for graph
+mean_variation <- mean(chromosome$percent_var)
+#this is a string that labels the graph using the annotate() layer
+desc <- c("The Sex Chromosomes Have Lower Genomic Varation Than Other Chromosomes")
+#xy var
+x_var <- chromosome %>% filter(id == "X") %>% select(percent_var) %>% pull()
+y_var <- chromosome %>% filter(id == "Y") %>% select(percent_var) %>% pull()
+#this is code to draw arrows for XY chromosome labels
+arrows <- tibble(
+  x1 = c(.03, .01),
+  x2 = c(.034, 0.006),
+  y1 = c(4.5, 4),
+  y2 = c(2, 2.5)
+)
+#need a different arrow set for negative curvature of y-axis arrow
+arrows2 <- tibble(
+  x1 = c(.02),
+  x2 = c(mean_variation),
+  y1 = c(18.5),
+  y2 = c(21.5)
+)
+ggplot(chromosome, aes(x = percent_var, y = fct_rev(id))) +
+  coord_cartesian(ylim = c(-0.5, 24.5), xlim = c(0, .07)) +
+  geom_vline(aes(xintercept = mean_variation), color = "gray70", size = 0.6) +
+  #geom_vline(aes(xintercept = 0), color = "gray70", size = 0.1) +
+  geom_segment(aes(y = fct_rev(id), yend = fct_rev(id), x = mean_variation, xend = percent_var), size = 0.4, color = "gray70") +
+  geom_mark_ellipse(aes(filter = id == "Y", 
+                        #label = 'Sex Chromosomes', 
+                        #description = desc, 
+                        fill = xy)) +
+  geom_mark_ellipse(aes(filter = id == "X", fill = xy)) +
+  geom_point(size = 5, fill = "white", color = "black", stroke = 1) +
+  theme_minimal() +
+  labs(x = "Variation (%, variation/basepairs)", y = "", title = desc, subtitle = "Assessing genomic variation on each human chromosome", caption = "Data from Wikipedia | Plot from @matthewhirschey") +
+  annotate("text", x = 0.02, y = 17, size = 4, color = "gray60",
+           label = glue::glue("Average Genomic Variation\n{round(mean_variation*100, 1)}%")) +
+  annotate("text", x = 0.03, y = 6, size = 4, color = "gray60",
+           label = glue::glue("X variation\n{round(x_var*100, 1)}%")) +
+  annotate("text", x = 0.015, y = 3.2, size = 4, color = "gray60",
+           label = glue::glue("Y variation\n{round(y_var*100, 1)}%")) +
+  annotate("text", x = 0.042, y = 24, size = 3, color = "black",
+           label = "CHROMOSOME", fontface = "bold") +
+  geom_curve(data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+             arrow = arrow(length = unit(0.07, "inch")), size = 0.4,
+             color = "gray60", curvature = 0.25) +
+  geom_curve(data = arrows2, aes(x = x1, y = y1, xend = x2, yend = y2),
+             arrow = arrow(length = unit(0.07, "inch")), size = 0.4,
+             color = "gray60", curvature = -0.2) +
+  geom_text(aes(label = fct_rev(id)), color = "white", size = 3, fontface = "bold") +
+  scale_x_continuous(breaks = seq(0, .06, .01),
+                     labels = seq(0, 6, 1)) +
+  theme(legend.position = "none") + #removes the lengend
+  theme(panel.grid.major.x = element_line(color = "gray", size = 0.1),
+        panel.grid.minor.x = element_line(color = "white"),
+        panel.grid.major.y = element_line(color = "white"),
+        axis.text.y = element_blank()) + 
+  NULL
+#links
+#https://ggplot2.tidyverse.org/reference/theme.html
+#https://ggplot2.tidyverse.org/reference/element.html
+#save your new plot to have an image for your final presentation
+ggsave(here::here("6_final", "variation.png"), plot = last_plot(), height = 5, width = 7, units = "in", dpi = 300) #plan on changing the width:height ratio for your own plot
+```
+
+## Conclusions
+The amount of genomic variation is lowest on the X and Y chromosomes, compared to the remaning human chromosomes. This observation implies that the fidelity of DNA sequences is more stringent and unique mechanisms are in place to ensure low variation.  
+  
+## Prioritized follow-up studies
+Chromatin states are known to influence genomic variation. Therefore, I would like to look at the chromatin state at these genomic loci, including histone modifications and DNA methylation status.
+
+## Acknolwedgements
+I would like to acknowledge Cedric Scherer for [plot inspiration](https://cedricscherer.netlify.com/2019/05/17/the-evolution-of-a-ggplot-ep.-1/), @garretgrom, @hadleywickham, and the @rstuio team for making the tidyverse packages easy to use, and you all for reaching the end of the class!
+
+# Kinase-Substrate Plot (a.k.a. the Karamanis Plot)
+

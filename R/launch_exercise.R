@@ -28,14 +28,21 @@ launch_exercise <- function(exercise = 1, show_answers = FALSE, testing = FALSE)
   }
 
   if(show_answers) {
-
+    if(exercise <= 9){
     file <- paste0("0", exercise, "_ex_answers.Rmd")
     rstudioapi::navigateToFile(paste0(package_path, exercise_path, file))
-
+    } else {
+      file <- paste0(exercise, "_ex_answers.Rmd")
+      rstudioapi::navigateToFile(paste0(package_path, exercise_path, file))
+    }
   } else {
-
+    if(exercise <= 9){
     file <- paste0("0", exercise, "_ex.Rmd")
     rstudioapi::navigateToFile(paste0(package_path, exercise_path, file))
+    } else{
+      file <- paste0(exercise, "_ex.Rmd")
+      rstudioapi::navigateToFile(paste0(package_path, exercise_path, file))
+    }
   }
 
 }

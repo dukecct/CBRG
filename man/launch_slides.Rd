@@ -2,20 +2,25 @@
 % Please edit documentation in R/launch_slides.R
 \name{launch_slides}
 \alias{launch_slides}
-\title{Launch Presentations}
+\title{Launch Slides for each Project}
 \usage{
-launch_slides(class = 1, testing = FALSE)
+launch_slides(project = 1, testing = FALSE)
 }
 \arguments{
-\item{class}{enter the relevant class number (as an int). Launches the corresponding html file in a browser.}
+\item{project}{Integer indicating the relevant project number.}
 
-\item{testing}{enter TRUE or FALSE (default is FALSE). Appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE.}
+\item{testing}{Logical (default == FALSE). Appropriate path is selected depending on what environment the package is runing in. USERS CAN IGNORE.}
+}
+\value{
+Opens the corresponding .Rmd file in RStudio (with or without answers).
 }
 \description{
 This function launches the named presentation
 }
+\examples{
+# Slides Corresponding to the Project Number 1
+launch_slides(project = 1)
+}
 \author{
-Akshay Bareja
-
-Pol Castellano
+Akshay Bareja, Pol Castellano-Escuder
 }

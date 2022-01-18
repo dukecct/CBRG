@@ -28,14 +28,21 @@ launch_project <- function(project = 1, show_answers = FALSE, testing = FALSE){
   }
 
   if(show_answers) {
-
+    if(project <= 9){
     file <- paste0("0", project, "_project_answers.Rmd")
     rstudioapi::navigateToFile(paste0(package_path, project_path, file))
-
     } else {
-
+    file <- paste0(project, "_project_answers.Rmd")
+    rstudioapi::navigateToFile(paste0(package_path, project_path, file))
+    }
+    } else {
+      if(project <= 9){
     file <- paste0("0", project, "_project.Rmd")
     rstudioapi::navigateToFile(paste0(package_path, project_path, file))
+      } else {
+      file <- paste0(project, "_project.Rmd")
+      rstudioapi::navigateToFile(paste0(package_path, project_path, file))
+      }
     }
 }
 

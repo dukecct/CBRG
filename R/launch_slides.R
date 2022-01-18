@@ -16,8 +16,11 @@
 launch_slides <- function(project = 1, testing = FALSE){
 
   package_path <- find.package("CBRG")
-  file <- paste0("0", project, "_slides.html")
-
+  if(project <= 9){
+    file <- paste0("0", project, "_slides.html")
+  } else {
+    file <- paste0(project, "_slides.html")
+  }
   if(testing){
     slides_path <- "/inst/slides/"
   } else {

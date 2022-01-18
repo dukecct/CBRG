@@ -2,22 +2,30 @@
 % Please edit documentation in R/launch_project.R
 \name{launch_project}
 \alias{launch_project}
-\title{Launch Rmd files for in-class activities}
+\title{Launch .Rmd files for in-project activities}
 \usage{
-launch_project(class = 1, show_answers = FALSE, testing = FALSE)
+launch_project(project = 1, show_answers = FALSE, testing = FALSE)
 }
 \arguments{
-\item{class}{enter the relevant class number (as an int). Opens the corresponding Rmd file in RStudio.}
+\item{project}{Integer indicating the relevant project number.}
 
-\item{show_answers}{enter TRUE or FALSE (default is FALSE). Opens the corresponding Rmd file WITH ANSWERS in RStudio.}
+\item{show_answers}{Logical (default == FALSE). If this parameter is set to TRUE, answers will be shown in the .Rmd file.}
 
-\item{testing}{enter TRUE or FALSE (default is FALSE). Appropriate path is selected depending on what environment the package is run in. USERS CAN IGNORE.}
+\item{testing}{Logical (default == FALSE). Appropriate path is selected depending on what environment the package is runing in. USERS CAN IGNORE.}
+}
+\value{
+Opens the corresponding .Rmd file in RStudio (with or without answers).
 }
 \description{
-This function launches the named class Rmd file
+This function launches the named project .Rmd file
+}
+\examples{
+# Project Number 1
+launch_project(project = 1)
+
+# Project Number 1 with Answers
+launch_project(project = 1, show_answers = TRUE)
 }
 \author{
-Akshay Bareja
-
-Pol Castellano
+Akshay Bareja, Pol Castellano-Escuder
 }
