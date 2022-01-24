@@ -1,0 +1,318 @@
+---
+title: "Differential Protein Expression Analysis (Answers)"
+author: "Your name"
+date: "Jan 27, 2021"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "BiocManager",
+  "remotes",
+  "tidyverse",
+  "factoextra"
+  )
+
+bioc_pkgs <- c(
+  "QFeatures",
+  "msdata",
+  "limma",
+  "DEqMS"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+
+# Install and load Bioconductor packages
+installBiocifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        BiocManager::install(pckgName)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(bioc_pkgs, installBiocifnot)
+```
+
+# Data Preparation
+```{r data-prep}
+f <- msdata::quant(pattern = "cptac", full.names = TRUE)
+# `f` tells us where we can find the cptac data
+
+# Get the names of the desired columns
+prot_df <- read.delim(f)
+
+col_names <- prot_df %>% 
+              dplyr::select(contains("Intensity") & contains("_")) %>% 
+              names() 
+
+# Read the data in using the `readSummarizedExperiment()` function
+cptac_se <- readSummarizedExperiment(f, ecol = col_names, fnames = "Sequence", sep = "\t")
+
+# Create some column data
+cptac_se$group <- rep(c("6A", "6B"), each = 3)
+cptac_se$sample <- rep(7:9, 2)
+colData(cptac_se)
+
+# Keep only a subset of row data
+# "Sequence", "Leading.razor.protein", "Score", "Reverse", "Potential.contaminant"
+keep_var <- c("Sequence", "Leading.razor.protein", "Reverse", "Potential.contaminant")
+
+rowData(cptac_se) <- rowData(cptac_se)[, keep_var]
+
+# deal with missing values
+cptac_se <- zeroIsNA(cptac_se)
+
+# remove rows that have 4 or more NAs out of 6
+cptac_se <- filterNA(cptac_se, pNA = 4/6)
+
+# convert to QFeatures object
+cptac <- QFeatures(list(peptides = cptac_se))
+colData(cptac) <- colData(cptac_se)
+
+# filter out reverse hits and contaminants
+cptac <- cptac %>%
+            filterFeatures( ~ Reverse != "+") %>%
+            filterFeatures( ~ Potential.contaminant != "+")
+
+# log-transform and normalize
+cptac <- logTransform(cptac, i = "peptides",
+                      name = "log_peptides")
+cptac <- normalize(cptac, i = "log_peptides",
+                   name = "lognorm_peptides", method = "quantiles")
+
+# aggregate data
+# median aggregation
+cptac <- aggregateFeatures(cptac,
+                      "lognorm_peptides",
+                      name = "proteins_med",
+                      fcol = "Leading.razor.protein",
+                      fun = colMedians,
+                      na.rm = TRUE)
+
+# sum aggregation
+cptac <- aggregateFeatures(cptac,
+                      "lognorm_peptides",
+                      name = "proteins_sum",
+                      fcol = "Leading.razor.protein",
+                      fun = colSums,
+                      na.rm = TRUE)
+
+# mean aggregation
+cptac <- aggregateFeatures(cptac,
+                      "lognorm_peptides",
+                      name = "proteins_mean",
+                      fcol = "Leading.razor.protein",
+                      fun = colMeans,
+                      na.rm = TRUE)
+
+# medianPolish
+cptac <- aggregateFeatures(cptac,
+                      "lognorm_peptides",
+                      name = "proteins_med_pol",
+                      fcol = "Leading.razor.protein",
+                      fun = MsCoreUtils::medianPolish,
+                      na.rm = TRUE)
+
+# robustSummary
+cptac <- aggregateFeatures(cptac,
+                      "lognorm_peptides",
+                      name = "proteins_rob_sum",
+                      fcol = "Leading.razor.protein",
+                      fun = MsCoreUtils::robustSummary,
+                      na.rm = TRUE)
+```
+
+# Statistical Analysis
+
+Here we use limma to compare the effects of the various aggregation methods shown above
+
+```{r using-limma}
+# Median Aggregation
+prots_med <- cptac[["proteins_med"]]
+colData(prots_med) <- colData(cptac)
+design_med <- model.matrix(~ prots_med$group)
+fit_med <- lmFit(assay(prots_med), design_med)
+# fit <- lmFit(cptac.gene.nm, design) # note: If you JUST use the normalization method used in the DEqMS
+# walkthrough, you get the SAME result whether or not you use the peptide count data!!!!
+fit_med <- eBayes(fit_med)
+
+res_med <-
+    topTable(fit_med, coef = "prots_med$group6B", number = Inf) %>%
+    rownames_to_column("protein") %>%
+    as_tibble() %>%
+    mutate(TP = grepl("ups", protein))
+
+res_med %>%
+    ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_point(aes(colour = TP)) +
+    geom_vline(xintercept = c(-1, 1)) +
+    geom_hline(yintercept = -log10(0.05)) +
+    scale_color_manual(values = c("black","red"))
+
+# Using the pipeline described above, we would would identify a single differentially expressed protein at a 5 percent FDR but miss out the other 32 expected spike-in proteins. 
+
+# Sum Aggregation
+prots_sum <- cptac[["proteins_sum"]]
+colData(prots_sum) <- colData(cptac)
+design_sum <- model.matrix(~ prots_sum$group)
+fit_sum <- lmFit(assay(prots_sum), design_sum)
+fit_sum <- eBayes(fit_sum)
+
+res_sum <-
+    topTable(fit_sum, coef = "prots_sum$group6B", number = Inf) %>%
+    rownames_to_column("protein") %>%
+    as_tibble() %>%
+    mutate(TP = grepl("ups", protein))
+
+res_sum %>%
+    ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_point(aes(colour = TP)) +
+    geom_vline(xintercept = c(-1, 1)) +
+    geom_hline(yintercept = -log10(0.05)) +
+    scale_color_manual(values = c("black","red")) # more true positives are detected but LOOK AT THE FOLD-CHANGES!!!
+
+# Mean Aggregation
+prots_mean <- cptac[["proteins_mean"]]
+colData(prots_mean) <- colData(cptac)
+design_mean <- model.matrix(~ prots_mean$group)
+fit_mean <- lmFit(assay(prots_mean), design_mean)
+fit_mean <- eBayes(fit_mean)
+
+res_mean <-
+    topTable(fit_mean, coef = "prots_mean$group6B", number = Inf) %>%
+    rownames_to_column("protein") %>%
+    as_tibble() %>%
+    mutate(TP = grepl("ups", protein))
+
+res_mean %>%
+    ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_point(aes(colour = TP)) +
+    geom_vline(xintercept = c(-1, 1)) +
+    geom_hline(yintercept = -log10(0.05)) +
+    scale_color_manual(values = c("black","red")) # slightly better than median aggregation
+
+# Median Polish Aggregation
+prots_med_pol <- cptac[["proteins_med_pol"]]
+colData(prots_med_pol) <- colData(cptac)
+design_med_pol <- model.matrix(~ prots_med_pol$group)
+fit_med_pol <- lmFit(assay(prots_med_pol), design_med_pol)
+fit_med_pol <- eBayes(fit_med_pol)
+
+res_med_pol <-
+    topTable(fit_med_pol, coef = "prots_med_pol$group6B", number = Inf) %>%
+    rownames_to_column("protein") %>%
+    as_tibble() %>%
+    mutate(TP = grepl("ups", protein))
+
+res_med_pol %>%
+    ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_point(aes(colour = TP)) +
+    geom_vline(xintercept = c(-1, 1)) +
+    geom_hline(yintercept = -log10(0.05)) +
+    scale_color_manual(values = c("black","red")) # Amazing!!
+
+# Robust Summary
+prots_rob_sum <- cptac[["proteins_rob_sum"]]
+colData(prots_rob_sum) <- colData(cptac)
+design_rob_sum <- model.matrix(~ prots_rob_sum$group)
+fit_rob_sum <- lmFit(assay(prots_rob_sum), design_rob_sum)
+fit_rob_sum <- eBayes(fit_rob_sum)
+
+res_rob_sum <-
+    topTable(fit_rob_sum, coef = "prots_rob_sum$group6B", number = Inf) %>%
+    rownames_to_column("protein") %>%
+    as_tibble() %>%
+    mutate(TP = grepl("ups", protein))
+
+res_rob_sum %>%
+    ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_point(aes(colour = TP)) +
+    geom_vline(xintercept = c(-1, 1)) +
+    geom_hline(yintercept = -log10(0.05)) +
+    scale_color_manual(values = c("black","red")) # 21 TPs detected!
+```
+
+```{r DEqMS}
+# Following section 2.3 of DEqMS vignette
+cptac_pep <- as_tibble(assays(cptac)[[1]]) # extract peptide-level data
+cptac_pep$Peptide <- rownames(assays(cptac)[[1]])
+cptac_pep$gene <- rowData(cptac)[[1]]$Leading.razor.protein
+cptac_pep <- cptac_pep %>% 
+              dplyr::select(Peptide, gene, everything())
+
+cptac_log <- cptac_pep
+cptac_log[ , 3:8] <- log2(cptac_pep[ , 3:8])
+
+# summarization and normalization (using DEqMS approach)
+cptac.gene.nm = medianSweeping(cptac_log, group_col = 2)
+boxplot(cptac.gene.nm, las=2, ylab="log2 ratio", main="CPTAC dataset")
+
+# perform DEqMS analysis 
+gene.matrix <- as.matrix(cptac.gene.nm)
+
+# make design table
+cond <- as.factor(prots$condition)
+design = model.matrix(~0 + cond) 
+
+# limma part analysis
+fit1 <- lmFit(gene.matrix, design)
+contrast =  makeContrasts(cond6B - cond6A, levels = design)
+fit2 <- eBayes(contrasts.fit(fit1, contrasts = contrast))
+
+# DEqMS part analysis
+psm.count.table = as.data.frame(table(cptac_psm$gene))
+rownames(psm.count.table) = psm.count.table$Var1
+
+fit2$count = psm.count.table[rownames(fit2$coefficients),2]
+fit3 = spectraCounteBayes(fit2)
+# extract DEqMS results
+DEqMS.results = outputResult(fit3, coef_col = 1) 
+head(DEqMS.results)
+
+# visualize results
+DEqMS.results %>% 
+  rownames_to_column("protein") %>% 
+  as_tibble() %>%
+  mutate(TP = grepl("ups", protein)) %>% 
+  ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_point(aes(colour = TP)) +
+    geom_vline(xintercept = c(-1, 1)) +
+    geom_hline(yintercept = -log10(0.05)) +
+    scale_color_manual(values = c("black","red")) 
+
+# We see that we have now identified 10 differentially expressed proteins (but still miss out on 23 others)
+```
+
