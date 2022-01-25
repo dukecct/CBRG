@@ -28,6 +28,7 @@ output:
   
   pdf_document: default
 ---
+
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -67,6 +68,7 @@ lapply(bioc_pkgs, installBiocifnot)
 ```
 
 # Data Preparation
+
 ```{r data-prep}
 f <- msdata::quant(pattern = "cptac", full.names = TRUE)
 # `f` tells us where we can find the cptac data
@@ -157,7 +159,7 @@ cptac <- aggregateFeatures(cptac,
 
 # Statistical Analysis
 
-Here we use limma to compare the effects of the various aggregation methods shown above
+Here we use `limma` to compare the effects of the various aggregation methods shown above.
 
 ```{r using-limma}
 # Median Aggregation
@@ -177,10 +179,11 @@ res_med <-
 
 res_med %>%
     ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_vline(xintercept = c(-1, 1), linetype = 2) +
+    geom_hline(yintercept = -log10(0.05), linetype = 2) +
     geom_point(aes(colour = TP)) +
-    geom_vline(xintercept = c(-1, 1)) +
-    geom_hline(yintercept = -log10(0.05)) +
-    scale_color_manual(values = c("black","red"))
+    scale_color_manual(values = c("black","red")) +
+    theme_bw()
 
 # Using the pipeline described above, we would would identify a single differentially expressed protein at a 5 percent FDR but miss out the other 32 expected spike-in proteins. 
 
@@ -199,10 +202,11 @@ res_sum <-
 
 res_sum %>%
     ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_vline(xintercept = c(-1, 1), linetype = 2) +
+    geom_hline(yintercept = -log10(0.05), linetype = 2) +
     geom_point(aes(colour = TP)) +
-    geom_vline(xintercept = c(-1, 1)) +
-    geom_hline(yintercept = -log10(0.05)) +
-    scale_color_manual(values = c("black","red")) # more true positives are detected but LOOK AT THE FOLD-CHANGES!!!
+    scale_color_manual(values = c("black","red")) +
+    theme_bw() # more true positives are detected but LOOK AT THE FOLD-CHANGES!!!
 
 # Mean Aggregation
 prots_mean <- cptac[["proteins_mean"]]
@@ -219,10 +223,11 @@ res_mean <-
 
 res_mean %>%
     ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_vline(xintercept = c(-1, 1), linetype = 2) +
+    geom_hline(yintercept = -log10(0.05), linetype = 2) +
     geom_point(aes(colour = TP)) +
-    geom_vline(xintercept = c(-1, 1)) +
-    geom_hline(yintercept = -log10(0.05)) +
-    scale_color_manual(values = c("black","red")) # slightly better than median aggregation
+    scale_color_manual(values = c("black","red")) +
+    theme_bw() # slightly better than median aggregation
 
 # Median Polish Aggregation
 prots_med_pol <- cptac[["proteins_med_pol"]]
@@ -239,10 +244,11 @@ res_med_pol <-
 
 res_med_pol %>%
     ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_vline(xintercept = c(-1, 1), linetype = 2) +
+    geom_hline(yintercept = -log10(0.05), linetype = 2) +
     geom_point(aes(colour = TP)) +
-    geom_vline(xintercept = c(-1, 1)) +
-    geom_hline(yintercept = -log10(0.05)) +
-    scale_color_manual(values = c("black","red")) # Amazing!!
+    scale_color_manual(values = c("black","red")) +
+    theme_bw() # Amazing!!
 
 # Robust Summary
 prots_rob_sum <- cptac[["proteins_rob_sum"]]
@@ -259,10 +265,11 @@ res_rob_sum <-
 
 res_rob_sum %>%
     ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_vline(xintercept = c(-1, 1), linetype = 2) +
+    geom_hline(yintercept = -log10(0.05), linetype = 2) +
     geom_point(aes(colour = TP)) +
-    geom_vline(xintercept = c(-1, 1)) +
-    geom_hline(yintercept = -log10(0.05)) +
-    scale_color_manual(values = c("black","red")) # 21 TPs detected!
+    scale_color_manual(values = c("black","red")) +
+    theme_bw() # 21 TPs detected!
 ```
 
 ```{r DEqMS}
@@ -284,20 +291,21 @@ boxplot(cptac.gene.nm, las=2, ylab="log2 ratio", main="CPTAC dataset")
 gene.matrix <- as.matrix(cptac.gene.nm)
 
 # make design table
-cond <- as.factor(prots$condition)
-design = model.matrix(~0 + cond) 
+cond <- as.factor(cptac$group)
+design <- model.matrix(~ 0 + cond) 
 
 # limma part analysis
 fit1 <- lmFit(gene.matrix, design)
-contrast =  makeContrasts(cond6B - cond6A, levels = design)
+contrast <- makeContrasts(cond6B - cond6A, levels = design)
 fit2 <- eBayes(contrasts.fit(fit1, contrasts = contrast))
 
 # DEqMS part analysis
-psm.count.table = as.data.frame(table(cptac_psm$gene))
-rownames(psm.count.table) = psm.count.table$Var1
+psm.count.table <- as.data.frame(table(cptac_pep$gene))
+rownames(psm.count.table) <- psm.count.table$Var1
 
-fit2$count = psm.count.table[rownames(fit2$coefficients),2]
-fit3 = spectraCounteBayes(fit2)
+fit2$count = psm.count.table[rownames(fit2$coefficients), 2]
+fit3 = spectraCounteBayes(fit2) # this line isn't working......
+
 # extract DEqMS results
 DEqMS.results = outputResult(fit3, coef_col = 1) 
 head(DEqMS.results)
@@ -308,10 +316,11 @@ DEqMS.results %>%
   as_tibble() %>%
   mutate(TP = grepl("ups", protein)) %>% 
   ggplot(aes(x = logFC, y = -log10(adj.P.Val))) +
+    geom_vline(xintercept = c(-1, 1), linetype = 2) +
+    geom_hline(yintercept = -log10(0.05), linetype = 2) +
     geom_point(aes(colour = TP)) +
-    geom_vline(xintercept = c(-1, 1)) +
-    geom_hline(yintercept = -log10(0.05)) +
-    scale_color_manual(values = c("black","red")) 
+    scale_color_manual(values = c("black","red")) +
+    theme_bw() 
 
 # We see that we have now identified 10 differentially expressed proteins (but still miss out on 23 others)
 ```
