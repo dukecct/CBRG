@@ -148,10 +148,9 @@ exprs(imputed) %>%
   pivot_longer(cols = everything(),
                names_to = "sample",
                values_to = "intensity") %>% 
-  ggplot(aes(intensity, colour = sample)) +
+  ggplot(aes(sample, intensity)) +
   geom_boxplot() +
-  theme(legend.position = "none") +
-  coord_flip()
+  theme(axis.text.x = element_text(angle = 45)) 
 
 normalized <- PomaNorm(imputed, method = "log_pareto")
 normalized
@@ -162,10 +161,9 @@ exprs(normalized) %>%
   pivot_longer(cols = everything(),
                names_to = "sample",
                values_to = "intensity") %>% 
-  ggplot(aes(intensity, colour = sample)) +
+  ggplot(aes(sample, intensity)) +
   geom_boxplot() +
-  theme(legend.position = "none") +
-  coord_flip()
+  theme(axis.text.x = element_text(angle = 45)) 
 
 # for more on normalizing metabolomics data -
 # https://www.uab.edu/proteomics/metabolomics/workshop/2014/statistical%20analysis.pdf
