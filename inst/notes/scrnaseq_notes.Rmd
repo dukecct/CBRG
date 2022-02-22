@@ -1,0 +1,871 @@
+---
+title: "scRNAseq notes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(SingleCellExperiment)
+library(DropletUtils)
+library(scater)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+library(EnsDb.Hsapiens.v86)
+library(scales)
+library(scran)
+library(sva)
+library(batchelor)
+library(ROCR)
+library(Seurat)
+
+devtools::install_github("hemberg-lab/scRNA.seq.funcs")
+devtools::install_github('theislab/kBET')
+
+library(scRNA.seq.funcs)
+library(kBET)
+```
+
+Source - https://www.singlecellcourse.org/scrna-seq-analysis-with-bioconductor.html
+Download files from - https://singlecellcourse.cog.sanger.ac.uk/index.html?prefix=data/
+
+Here's an AMAZING description of UMIs, barcodes, sequencing details, and how the count matrix is made - https://github.com/hbctraining/scRNA-seq/blob/master/lessons/02_SC_generation_of_count_matrix.md
+
+Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
+
+## 5.2.1 Creating SCE Objects
+```{r}
+tung_counts <- read.table("inst/data/tung/molecules.txt", sep = "\t")
+tung_annotation <- read.table("inst/data/tung/annotation.txt", sep = "\t", header = TRUE)
+
+# inspect data
+dim(tung_counts) # 19027 genes   864 cells
+dim(tung_annotation) # 864 5. Information on individual cells
+
+# note that the data passed to the assay slot has to be a matrix!
+tung <- SingleCellExperiment(
+  assays = list(counts = as.matrix(tung_counts)),
+  colData = tung_annotation
+)
+
+# remove the original tables as we don't need them anymore
+rm(tung_counts, tung_annotation)
+
+tung # just like a SummarizedExperiment object!!
+
+# Accessor functions
+rowData(tung) # Table of gene metadata
+colData(tung) # Table of cell metadata
+assay(tung, "counts") # The assay named "counts"
+tung$individual # Accessing particular columns from colData
+tung[1, 2] # can subset just like a dataframe
+```
+
+Creating SingleCellExperiment objects like we did above should work for any use case, as long as we have a matrix of counts that we can read to a file. However, to read the output of the popular tool cellranger (used to quantify 10x Chromium data), there is a dedicated function in the DropletUtils package, which simplifies the process of importing the data. Here is an example usage:
+
+```{r}
+# importing the raw count data
+sce <- read10xCounts("inst/data/pbmc_1k_raw")
+sce
+
+# importing the pre-filtered count data
+sce <- read10xCounts("inst/data/pbmc_1k_filtered")
+sce
+
+# Exercise 1
+
+# What are the classes of the “colData” and “assay” slots of our tung object?
+class(colData(tung))
+class(assay(tung, "counts"))
+
+# How many batches and cells per batch are there? Does that number make sense?
+colData(tung) %>% 
+  as_tibble() %>% 
+  dplyr::count(batch) # 9 batches of 96 cells
+
+9 * 96 == dim(tung)[2] # TRUE
+
+# book solution
+table(tung$batch)
+
+# This number of cells per batch suggests that the protocol was done on 96-well plates, so the authors used a low-throughput method for their experiment
+```
+
+## 5.2.2 Modifying SCE Objects
+
+To modify parts of our SCE object we can use the <- assignment operator, together with the part of the object we wish to modify. For example, to create a new assay: assay(sce, "name_of_new_assay") <- new_matrix. Other use cases are summarised in the table below.
+
+As an example, let’s create a simple transformation of our count data, by taking the log base 2 with an added pseudocount of 1 (otherwise log(0) = -Inf):
+
+```{r}
+assay(tung, "logcounts") <- log2(counts(tung) + 1)
+tung # now we have two assays
+
+# first 10 rows and 4 columns of the logcounts assay
+logcounts(tung)[1:10, 1:4] # or: assay(tung, "logcounts")[1:10, 1:5]
+```
+
+## 5.2.3 Matrix Statistics
+
+Because the main data stored in SingleCellExperiment objects is a matrix, it is useful to cover some functions that calculate summary metrics across rows or columns of a matrix. There are several functions to do this, detailed in the information box below.
+
+For example, to calculate the mean counts per cell (columns) in our dataset:
+
+```{r}
+colMeans(counts(tung))
+
+# We could add this information to our column metadata as a new column, which we could do as:
+colData(tung)$mean_counts <- colMeans(counts(tung))
+```
+
+Exercise 2
+
+1. Add a new column to colData named “total_counts” with the sum of counts in each cell.
+2. Create a new assay called “cpm” (Counts-Per-Million), which contains the result of dividing the counts matrix by the total counts in millions.
+3. How can you access this new assay?
+
+```{r}
+colData(tung)$total_counts <- colSums(counts(tung))
+
+assay(tung, "cpm") <- counts(tung)/tung$total_counts/1e6
+# We also divided by 1e6, so that it’s in units of millions.
+
+# Note that we’re dividing a matrix (counts(tung)) by a vector (tung$total_counts). R will do this division row-by-row, and “recycles” the tung$total_counts vector each time it starts a new row of the counts(tung) matrix.
+
+# is this true??
+# test
+cpm(tung)[1, 73] == counts(tung)[1, 73]/tung$total_counts[73]/1e6 # FALSE!!
+
+# also
+sum(cpm(tung)[ , 1]) # 1.147099e-06
+
+# simple example
+simple_mat <- matrix(data = c(1:10), nrow = 2, byrow = TRUE)
+simple_vec <- c(1:5)
+simple_mat/simple_vec
+
+# correct answer - 
+sweep(simple_mat, 2, simple_vec, "/")
+
+# R doesn't do matrix/vector division by row!
+# correct answer for Tung
+assay(tung, "cpm") <- sweep(counts(tung), 2, tung$total_counts, "/")/1e6
+
+# test
+cpm(tung)[1, 73] == counts(tung)[1, 73]/tung$total_counts[73]/1e6 # TRUE!
+
+# also
+sum(cpm(tung)[ , 1]) # 1e-06
+```
+
+## 5.2.4 Subsetting SCE Objects
+
+```{r}
+# examples
+# subset by numeric index
+tung[1:3, ] # the first 3 genes, keep all cells
+tung[, 1:3] # the first 3 cells, keep all genes
+tung[1:3, 1:2] # the first 3 genes and first 2 cells
+
+# subset by name
+tung[c("ENSG00000069712", "ENSG00000237763"), ]
+tung[, c("NA19098.r1.A01", "NA19098.r1.A03")]
+tung[c("ENSG00000069712", "ENSG00000237763"), c("NA19098.r1.A01", "NA19098.r1.A03")]
+```
+
+Although manually subsetting the object can sometimes be useful, more often we want to do conditional subsetting based on TRUE/FALSE logical statements. This is extremely useful for filtering our data. Let see some practical examples.
+
+Let’s say we wanted to retain genes with a mean count greater than 0.01. As we saw, to calculate the mean counts per gene (rows in the SCE object), we can use the rowMeans() function:
+
+```{r}
+# calculate the mean counts per gene
+gene_means <- rowMeans(counts(tung))
+
+# print the first 10 values
+gene_means[1:10]
+
+# We can use such a logical vector inside [ to filter our data, which will return only the cases where the value is TRUE:
+
+tung[gene_means > 0.01, ]
+
+# Another common use case is to retain cells with a certain number of genes above a certain threshold of expression. For this question, we need to break the problem into parts. First let’s check in our counts matrix, which genes are expressed above a certain threshold:
+
+# counts of at least 1
+counts(tung) > 0
+
+# We can see that our matrix is now composed of only TRUE/FALSE values. Because TRUE/FALSE are encoded as 1/0, we can use colSums() to calculate the total number of genes above this threshold per cell:
+
+# total number of detected genes per cell
+total_detected_per_cell <- colSums(counts(tung) > 0)
+
+# print the first 10 values
+total_detected_per_cell[1:10]
+
+# Finally, we can use this vector to apply our final condition, for example that we want cells with at least 5000 detected genes:
+
+tung[, total_detected_per_cell > 5000]
+```
+
+Exercise 3
+
+1. Create a new object called tung_filtered which contains:
+ - cells with at least 25000 total counts
+ - genes that have more than 5 counts in at least half of the cells
+2. How many cells and genes are you left with?
+```{r}
+cell_filter <- colSums(counts(tung)) >= 25000
+
+# check how many TRUE/FALSE have
+table(cell_filter)
+
+gene_filter <- rowSums(counts(tung) > 5) > ncol(tung)/2
+
+# check how many TRUE/FALSE have
+table(gene_filter)
+
+tung_filtered <- tung[gene_filter, cell_filter]
+
+tung_filtered
+```
+
+## 5.3 Visual Data Exploration
+
+```{r}
+cell_info <- as.data.frame(colData(tung))
+
+head(cell_info)
+
+ggplot(data = cell_info, aes(x = batch, y = total_counts)) +
+  geom_violin(fill = 'brown') + theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+What if we wanted to visualise the distribution of expression of a particular gene in each batch? This now gets a little more complicated, because the gene expression information is stored in the counts assay of our SCE, whereas the batch information is in the colData. To bring both of these pieces of information together would require us to do a fair amount of data manipulation to put it all together into a single data.frame. This is where the scater package is very helpful, as it provides us with the ggcells() function that let’s us specify all these pieces of information for our plot.
+
+For example, the same plot as above could have been done directly from our tung SCE object:
+
+```{r}
+ggcells(tung, aes(x = batch, y = total_counts)) +
+  geom_violin(fill = 'orange') + theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+# If we instead wanted to plot the expression for one of our genes, we could do it as:
+
+ggcells(tung, aes(x = batch, y = ENSG00000198938), exprs_values = "logcounts") + 
+  geom_violin(fill = 'coral2') + theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) # wow!
+```
+
+Note that we specified which assay we wanted to use for our expression values (exprs_values option). The default is “logcounts,” so we wouldn’t have had to specify it in this case, but it’s worth knowing that in case you want to visualise the expression from a different assay. The functionality provided by the scater package goes far beyond plotting, it also includes several functions for quality control, which we will return to in the next chapter
+
+Exercise 4
+
+Make a scatterplot showing the relationship between the mean and the variance of the raw counts per cell. (Bonus: also colour the cells by batch.)
+
+```{r}
+colData(tung)$var_counts <- colVars(counts(tung))
+
+ggcells(tung, aes(x = mean_counts, y = var_counts, colour = batch)) +
+  geom_point() + theme_bw()
+```
+
+We can see that there is a positive correlation between the mean and variance of gene counts. This is a common feature of count data, in particular of RNA-seq data. Because of this relationship, it’s important to use tools that model the mean-variance relationship adequately, so that when we choose genes that are variable in our dataset, we’re not simply choosing genes that are more highly expressed
+
+# 6 Basic Quality Control (QC) and Exploration of scRNA-seq Datasets
+
+## 6.1 Dataset Contruction and QC
+
+Since there is currently no standard method for performing scRNA-seq, the expected values for the various QC measures that will be presented here can vary substantially from experiment to experiment. Thus, to perform QC we will be looking for cells which are outliers with respect to the rest of the dataset rather than comparing to independent quality standards. Consequently, care should be taken when comparing quality metrics across datasets sequenced using different protocols
+
+## 6.1.2 Tung Dataset
+
+To illustrate cell QC, we consider a dataset of induced pluripotent stem cells generated from three different individuals (Tung et al. 2017) in Yoav Gilad’s lab at the University of Chicago. The experiments were carried out on the Fluidigm C1 platform and to facilitate the quantification both unique molecular identifiers (UMIs) and ERCC spike-ins were used. Due to rapid increase in droplet-based method use, spike-ins are not widely used anymore; however, they can serve as an informative control for low throughput methods
+
+```{r}
+molecules <- read.delim("inst/data/tung/molecules.txt", row.names=1)
+annotation <- read.delim("inst/data/tung/annotation.txt", stringsAsFactors = T)
+
+# Here we set altExp to contain ERCC, removing ERCC features from the main object:
+
+umi <- SingleCellExperiment(assays = list(counts = as.matrix(molecules)), colData = annotation)
+?altExp
+altExp(umi,"ERCC") <- umi[grep("^ERCC-",rownames(umi)), ]
+umi <- umi[grep("^ERCC-",rownames(umi),invert = T), ]
+?grep # invert parameter - logical. If TRUE return indices or values for elements that do NOT match
+
+# you can access the "alt exp" by - 
+altExp(umi)
+
+# ERCC refers to the spike-in mix - https://www.thermofisher.com/order/catalog/product/4456740
+```
+
+Now, let’s map ENSEMBL IDs to gene symbols. From the table command, we can see that most genes were annotated; however, 846 returned “NA.” By default, mapIds returs one symbol per ID; this behaviour can be changed using multiVals argument
+
+```{r}
+gene_names <- mapIds(org.Hs.eg.db, keys=rownames(umi), keytype = "ENSEMBL", column="SYMBOL")
+?mapIds
+
+rowData(umi)$SYMBOL <- gene_names
+table(is.na(gene_names))
+
+# Let’s remove all genes for which no symbols were found
+umi <- umi[!is.na(rowData(umi)$SYMBOL), ]
+
+# Let’s check if we can find mitochondrial proteins in the newly annotated symbols
+grep("^MT-",rowData(umi)$SYMBOL, value = T)
+?grep # value parameter - if FALSE, a vector containing the (integer) indices of the matches determined by grep is returned, and if TRUE, a vector containing the matching elements themselves is returned
+
+# Strangely, this returns nothing. Similar command to find ribosomal proteins (which start with RPL or RPS) works as expected
+
+grep("^RP[LS]",rowData(umi)$SYMBOL,value = T)
+
+# Quick search for mitochondrial protein ATP8, which is also called MT-ATP8, shows that the name does not contain “MT-.” However, the correct feature (ENSEMBL ID ENSG00000228253) is present in our annotation
+
+grep("ATP8",rowData(umi)$SYMBOL,value = T)
+
+# Most modern annotations, e.g. ones used by Cell Ranger, will have mitochondrial genes names that start with MT-. For some reason, the one we have found does not. Annotation problems in general are very common and should be always considered carefully. In our case, we also can’t find the location of genes since chromosomes are not supported in org.Hs.eg.db - there are no genome location columns in this database
+
+columns(org.Hs.eg.db)
+
+# Let’s try a different, more detailed database - EnsDb.Hsapiens.v86. Using this resource, we can find 13 protein-coding genes located in the mitochondrion
+
+ensdb_genes <- genes(EnsDb.Hsapiens.v86)
+MT_names <- ensdb_genes[seqnames(ensdb_genes) == "MT"]$gene_id
+is_mito <- rownames(umi) %in% MT_names
+table(is_mito)
+```
+
+## 6.1.3 Basic QC
+
+The following scater functions allow us to add per-cell and per-gene metrics useful for dataset evaluation. Most popular metrics per cell are total number of counts (UMIs), total number of detected genes, total number of mitochondrial counts, percent of mitochondrial counts, etc
+
+```{r}
+umi_cell <- perCellQCMetrics(umi, subsets = list(Mito = is_mito))
+umi_feature <- perFeatureQCMetrics(umi)
+?perFeatureQCMetrics # output - 
+# mean: numeric, the mean counts for each feature.
+# detected: numeric, the percentage of observations above threshold.
+# default threshold is 0
+
+head(umi_cell)
+head(umi_feature)
+
+# We can now use the functions that add the metrics calculated above to per-cell and per-gene metadata
+
+umi <- addPerCellQC(umi, subsets=list(Mito=is_mito))
+umi <- addPerFeatureQC(umi)
+
+# Manual filtering can use any cutoff we choose. In order to find a good value, it’s good to look at the distribution
+
+hist(
+    umi$total,
+    breaks = 100
+)
+abline(v = 25000, col = "red")
+
+hist(
+  umi_cell$detected,
+  breaks = 100
+)
+abline(v = 7000, col = "red")
+```
+
+Sometimes it’s hard to come up with an obvious filtering cutoff. In this case, adaptive threshold can help us identify points that are more than 3 median absolute deviations (MADs) away from the median in any of the variables we use for QC. Be careful to specify if the correct direction of the deviation: indeed, low number of detected genes, but high MT gene percentage, are hallmarks of a low quality cell
+
+```{r}
+qc.lib2 <- isOutlier(umi_cell$sum, log=TRUE, type = "lower")
+attr(qc.lib2, "thresholds")
+qc.lib2
+
+?isOutlier
+# Convenience function to determine which values in a numeric vector are outliers based on the median absolute deviation (MAD)
+# nmads	- A numeric scalar, specifying the minimum number of MADs away from median required for a value to be called an outlier (default is 3)
+?attr
+# Get or set specific attributes of an object
+
+qc.nexprs2 <- isOutlier(umi_cell$detected, log=TRUE, type="lower")
+attr(qc.nexprs2, "thresholds")
+
+qc.spike2 <- isOutlier(umi_cell$altexps_ERCC_percent, type="higher")
+attr(qc.spike2, "thresholds") # note higher!
+
+qc.mito2 <- isOutlier(umi_cell$subsets_Mito_percent, type="higher")
+attr(qc.mito2, "thresholds") # note higher!
+
+discard2 <- qc.lib2 | qc.nexprs2 | qc.spike2 | qc.mito2
+DataFrame(LibSize=sum(qc.lib2), NExprs=sum(qc.nexprs2), SpikeProp=sum(qc.spike2), MitoProp=sum(qc.mito2), Total=sum(discard2))
+
+# All the actions performed above could be done in one scater command, quickPerCellQC:
+reasons <- quickPerCellQC(umi_cell, sub.fields=c("subsets_Mito_percent", "altexps_ERCC_percent"))
+colSums(as.matrix(reasons))
+
+?quickPerCellQC
+# A convenient utility that identifies low-quality cells based on frequently used QC metrics
+# sub.fields - Character vector specifying the column(s) of x containing the percentage of counts in subsets of “control features”, usually mitochondrial genes or spike-in transcripts.nIf set to TRUE, this will default to all columns in x with names following the patterns "subsets_.*_percent" and "altexps_.*_percent"
+
+# Let’s add another metadata column that would keep the information about whether a cell is discarded or not
+
+umi$discard <- reasons$discard
+```
+
+Plotting various coldata (cell-level medadata) assays against each other allows us to illustrate the dependencies between them. For example, cells with high mitochondrial content usually are considered dead or dying; these cells also usually have low overall UMI counts and number of detected genes
+
+```{r}
+plotColData(umi, x="sum", y="subsets_Mito_percent", colour_by="discard")
+plotColData(umi, x="sum", y="detected", colour_by="discard")
+plotColData(umi, x="altexps_ERCC_percent", y="subsets_Mito_percent",colour_by="discard")
+
+# We can also plot coldata with splitting by batches to see if there are substantial batch-specific differences
+
+plotColData(umi, x="sum", y="detected", colour_by="discard", other_fields = "individual") + 
+  facet_wrap(~individual) + scale_x_continuous(labels = unit_format(unit = "k", scale = 1e-3))
+
+plotColData(umi, x="sum", y="detected", colour_by="discard", other_fields = "replicate") + 
+  facet_wrap(~replicate)  + scale_x_continuous(labels = unit_format(unit = "k", scale = 1e-3))
+```
+
+## 6.1.4 Highly Expressed Genes
+
+Let’s take a look at the most expressed genes in the whole dataset. We will use symbols we obtained above. Most of the genes we see are mitochondrial or ribosomal proteins, which is pretty typical for most scRNA-seq datasets
+
+```{r}
+plotHighestExprs(umi, exprs_values = "counts", 
+                 feature_names_to_plot = "SYMBOL", colour_cells_by="detected")
+# plot takes a long time to load
+
+# Let’s keep the genes which were detected (expression value > 1) in 2 or more cells. We’ll discard approximately 4,000 weakly expressed genes
+
+keep_feature <- nexprs(umi, byrow = TRUE, detection_limit = 1) >= 2
+rowData(umi)$discard <- !keep_feature 
+table(rowData(umi)$discard)
+
+?nexprs
+# Counting the number of non-zero counts in each row (per feature) or column (per cell)
+# byrow - Logical scalar indicating whether to count the number of detected cells per feature. If FALSE, the function will count the number of detected features per cell
+# detection_limit - Numeric scalar providing the value above which observations are deemed to be expressed
+
+# Let’s make a new assay, logcounts_raw, which will contain log2-transformed counts with added pseudocount of 1
+
+assay(umi, "logcounts_raw") <- log2(counts(umi) + 1)
+
+saveRDS(umi, file = "inst/data/tung/umi.rds")
+```
+
+## 6.2 Data Visualization and Dimensionality Reduction
+
+One important aspect of single-cell RNA-seq is to control for batch effects. Batch effects are technical artefacts that are added to the samples during handling. For example, if two sets of samples were prepared in different labs or even on different days in the same lab, then we may observe greater similarities between the samples that were handled together. In the worst case scenario, batch effects may be mistaken for true biological variation. The Tung data allows us to explore these issues in a controlled manner since some of the salient aspects of how the samples were handled have been recorded. Ideally, we expect to see batches from the same individual grouping together and distinct groups corresponding to each individual
+
+Let’s create another SingleCellExperiment object, umi.qc, in which remove unnecessary poorly expressed genes and low quality cells
+
+```{r}
+umi.qc <- umi[! rowData(umi)$discard,! colData(umi)$discard]
+```
+
+Without log-transformation or normalization, PCA plot fails to separate the datasets by replicate or individual. We mostly see the effects of sequencing depth - samples (cells) with lots of expression, and particularly highly expressed genes, dominate the PCs
+
+```{r}
+umi <- runPCA(umi, exprs_values = "counts")
+dim(reducedDim(umi, "PCA"))
+
+plotPCA(umi, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+With log-transformation, we equalize the large difference between strongly and weakly expressed genes, and immediately see cells form groups by replicate, individual, and sequencing depth. When PCA is re-run, reducedDim object in umi is overwritten
+
+```{r}
+umi <- runPCA(umi, exprs_values = "logcounts_raw")
+dim(reducedDim(umi, "PCA"))
+
+plotPCA(umi, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+Clearly log-transformation is benefitial for our data - it reduces the variance on the first principal component and already separates some biological effects. Moreover, it makes the distribution of the expression values more normal. In the following analysis and chapters we will be using log-transformed raw counts by default.
+
+**However, note that just a log-transformation is not enough to account for different technical factors between the cells (e.g. sequencing depth). Therefore, please do not use logcounts_raw for your downstream analysis, instead as a minimum suitable data use the logcounts slot of the SingleCellExperiment object, which not just log-transformed, but also normalised by library size (e.g. CPM normalisation). In the course we use logcounts_raw only for demonstration purposes!**
+
+Let’s do the same analysis as above, but using umi.qc dataframe instead of the full umi
+
+```{r}
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts_raw")
+dim(reducedDim(umi.qc, "PCA"))
+
+plotPCA(umi.qc, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+Comparing figures above, it is clear that after quality control the NA19098.r2 cells no longer form a group of outliers.
+
+By default only the top 500 most variable genes are used by scater to calculate the PCA. This can be adjusted by changing the ntop argument.
+
+Exercise 1 How do the PCA plots change if when all 14,154 genes are used? Or when only top 50 genes are used? Why does the fraction of variance accounted for by the first PC change so dramatically?
+
+```{r}
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts_raw",ntop = nrow(umi.qc))
+plotPCA(umi.qc, colour_by = "batch", size_by = "detected", shape_by = "individual")
+
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts_raw",ntop = 50)
+plotPCA(umi.qc, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+## 6.3 Identifying Confounding Factors
+
+There is a large number of potential confounders, artifacts and biases in scRNA-seq data. One of the main challenges in analyzing scRNA-seq data stems from the fact that it is difficult to carry out a true technical replicate (why?) to distinguish biological and technical variability. In the previous chapters we considered batch effects and in this chapter we will continue to explore how experimental artifacts can be identified and removed. We will continue using the scater package since it provides a set of methods specifically for quality control of experimental and explanatory variables. Moreover, we will continue to work with the Blischak data (???) that was used in the previous chapter
+
+scater allows one to identify principal components that correlate with experimental and QC variables of interest (it ranks principle components by R-squared from a linear model regressing PC value against the variable of interest)
+
+```{r}
+logcounts(umi.qc) <- assay(umi.qc, "logcounts_raw")
+getExplanatoryPCs(umi.qc, variables = "sum")
+
+plotExplanatoryPCs(umi.qc, variables = "sum") # this is a terrible plot
+
+?getExplanatoryPCs
+?plotExplanatoryPCs
+
+logcounts(umi.qc) <- NULL
+
+# We see that some PCs (e.g. PC3) can be largely explained by total UMI counts (sequencing depth)
+```
+
+scater can also compute the marginal R-squared for each variable when fitting a linear model regressing expression values for each gene against just that variable, and display a density plot of the gene-wise marginal R-squared values for the variables
+
+```{r}
+plotExplanatoryVariables(umi.qc,exprs_values = "logcounts_raw",
+                         variables = c("detected","sum","batch",
+                                      "individual","altexps_ERCC_percent","subsets_Mito_percent"))
+```
+
+This analysis indicates that the number of detected genes (again) and also the sequencing depth (number of counts) have substantial explanatory power for many genes, so these variables are good candidates for conditioning out in a normalisation step, or including in downstream statistical models. Expression of ERCCs also appears to be an important explanatory variable and one notable feature of the above plot is that batch explains more than individual. What does that tell us about the technical and biological variability of the data?
+
+## 6.4 Normalization Theory
+
+In the previous chapter we identified important confounding factors and explanatory variables. scater allows one to account for these variables in subsequent statistical models or to condition them out using normaliseExprs(), if so desired. This can be done by providing a design matrix to normaliseExprs(). We are not covering this topic here, but you can try to do it yourself as an exercise.
+
+Instead we will explore how simple size-factor normalisations correcting for library size can remove the effects of some of the confounders and explanatory variables
+
+Library sizes vary because scRNA-seq data is often sequenced on highly multiplexed platforms the total reads which are derived from each cell may differ substantially. Some quantification methods (eg. Cufflinks, RSEM) incorporated library size when determining gene expression estimates thus do not require this normalization.
+
+However, if another quantification method was used then library size must be corrected for by multiplying or dividing each column of the expression matrix by a “normalization factor” which is an estimate of the library size relative to the other cells. Many methods to correct for library size have been developped for bulk RNA-seq and can be equally applied to scRNA-seq (eg. UQ, SF, CPM, RPKM, FPKM, TPM)
+
+Re-read - 6.4.3 Normalisations
+
+### 6.5 Normalization Practice (using the tung dataset)
+
+```{r}
+set.seed(1234567)
+umi <- readRDS("inst/data/tung/umi.rds")
+umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
+```
+
+Log transformation makes the data group intuitively (e.g., by individual). However, there is clear dependency on the sequencing depth
+
+```{r}
+umi.qc <- runPCA(umi.qc,exprs_values = "logcounts_raw")
+plotPCA(umi.qc,colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+For future exercises, note that assay named logcounts is the default for most plotting and dimensionality reduction functions. We shall populate it with various normalizations and compare the results. The logcounts assay and PCA reducedDim objects are replaced every time we re-do normalization or runPCA
+
+```{r}
+logcounts(umi.qc) <- log2(calculateCPM(umi.qc) + 1)
+umi.qc <- runPCA(umi.qc) # how does it "know" to do this on the logcounts?
+plotPCA(umi.qc, colour_by = "batch", size_by = "detected", shape_by = "individual")
+
+?calculateCPM
+# Calculate counts-per-million (CPM) values from the count data
+# x - A numeric matrix of counts where features are rows and cells are columns
+
+?runPCA
+```
+
+A relative log expression (RLE) plots can be very useful assessing whether normalization procedure was successful
+```{r}
+plotRLE(umi.qc, exprs_values = "logcounts_raw", colour_by = "batch") + ggtitle("RLE plot for logcounts_raw")
+
+plotRLE(umi.qc, exprs_values = "logcounts", colour_by = "batch") + ggtitle("RLE plot for log2(CPM) counts")
+
+?plotRLE
+
+# The most obvious feature an RLE plot reveals is sample heterogeneity
+
+# In ideal circumstances, the boxplots of RLE plot would be 0-centered and roughly equal size
+
+# for more on RLE plots and how to interpret them - 
+# https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0191629&type=printable
+# Figure 1 makes all of this very clear!
+
+# RLE plots are particularly useful for assessing whether a normalization procedure, i.e. a procedure that attempts to remove unwanted variation, has been successful; a “bad” plot indicates a failure to normalize. It is important to note, however, that achieving an ideal RLE plot after applying a normalization procedure does not necessarily mean the procedure has succeeded. The procedure may have succeeded in removing the unwanted variation, but may have also removed the biological signal of interest, i.e. the differ- ences in expression of a minority of genes. An RLE plot cannot diagnose whether the signal of interest has been removed, only whether significant unwanted variation remains; the plot can- not tell if the baby has been thrown out with the bath water :)
+
+# The only assumption we need to inter- pret sample heterogeneity in an RLE plot as a sign of unwanted variation is that expression levels of a majority of genes are unaffected by the biological factors of interest. We noted, how- ever, that while this assumption is often plausible, it is sometimes not safe to make, and some- times not even needed
+```
+
+CPM-based and other similar library-wise scaling approaches assume that all cells contain similar amounts of RNA, and hence should produce similar UMI counts. This is not always true. The following method, available in scran and several other bioconductoR packages, uses clustering in order to make normalization. This is sometimes referred to as normalization by deconvolution. First, let’s do a quick-and-dirty clustering. These clusters look conspicuously like our batches!
+
+```{r}
+qclust <- quickCluster(umi.qc, min.size = 30)
+table(qclust)
+
+?quickCluster
+# Cluster similar cells based on their expression profiles, using either log-expression values or ranks
+
+# Next, let’s compute the size factors using the clustering. The first function adds a column to colData named sizeFactor. These values are then used by logNormCounts
+
+umi.qc <- computeSumFactors(umi.qc, clusters = qclust)
+
+?computeSumFactors
+# Scaling normalization of single-cell RNA-seq data by deconvolving size factors from cell pools
+
+# Idea - Briefly, a pool of cells is selected and the expression profiles for those cells are summed together. The pooled expression profile is normalized against an average reference pseudo-cell, constructed by averaging the counts across all cells. This defines a size factor for the pool as the median ratio between the count sums and the average across all genes
+
+umi.qc <- logNormCounts(umi.qc)
+?logNormCounts
+# This function is a convenience wrapper around normalizeCounts
+# normalizeCounts - Compute (log-)normalized expression values by dividing counts for each cell by the corresponding size factor
+
+umi.qc <- runPCA(umi.qc)
+plotPCA(umi.qc, colour_by = "batch",size_by = "detected", shape_by = "individual")
+
+# RLE plots also displays a nicely regularized plot
+plotRLE(umi.qc, exprs_values = "logcounts",colour_by = "batch")
+
+# Sometimes scran produces negative or zero size factors. These will completely distort the normalized expression matrix. We can check the size factors scran has computed like so
+
+summary(sizeFactors(umi.qc))
+
+# For this dataset all the size factors are well-behaved; we will use this normalization for further analysis. If you find scran has calculated negative size factors try increasing the cluster and pool sizes until they are all positive
+
+# nice!
+# I think I get what's going on here
+```
+
+
+## 6.6 Dealing with Confounders
+
+In the previous chapter we normalized for library size, effectively removing it as a confounder. Now we will consider removing other less well-defined confounders from our data. Technical confounders (aka batch effects) can arise from difference in reagents, isolation methods, the lab/experimenter who performed the experiment, even which day or time of the day the experiment was performed. Accounting for technical confounders, and batch effects particularly, is a large topic that also involves principles of experimental design. Here we address approaches that can be taken to account for confounders when the experimental design is appropriate
+
+Fundamentally, accounting for technical confounders involves identifying and, ideally, removing sources of variation in the expression data that are not related to (i.e. are confounding) the biological signal of interest. Various approaches exist, some of which use spike-in or housekeeping genes, and some of which use endogenous genes
+
+The use of spike-ins as control genes is appealing, since the same amount of ERCC (or other) spike-in was added to each cell in our experiment. In principle, all the variablity we observe for these genes is due to technical noise; whereas endogenous genes are affected by both technical noise and biological variability. Technical noise can be removed by fitting a model to the spike-ins and “substracting” this from the endogenous genes. However, there are issues with the use of spike-ins for normalisation (particularly ERCCs, derived from bacterial sequences), including that their variability can, for various reasons, actually be higher than that of endogenous genes
+
+Given the issues with using spike-ins, **better results can often be obtained by using endogenous genes instead**. Where we have a large number of endogenous genes that, on average, do not vary systematically between cells and where we expect technical effects to affect a large number of genes (a very common and reasonable assumption), then such methods (for example, the RUVs method) can perform well
+
+**There are two scenarios in scRNA-seq dataset integration**. In the first scenario, cell composition is expected to be the same, and methods developed for bulk RNA-seq (e.g. ComBat) exhibit good performance. This is often true for biological replicates of the same experiment; this is also true for batches in tung dataset. In the second scenario, the overlap between the datasets is partial - e.g. if datasets represent healthy and diseased tissue, which differ in cell type composition substantially. In this case, mutual nearest neighbor (MNN)-based methods tend to perform much better. We will look at these
+
+Here, we will perform batch correction using two methods - ComBat, based on empirical Bayesian framework, and fastMNN, which is a MNN-based method from the package batchelor
+
+Let’s read in the pre-processed dataset and normalize it using logNormCounts from scran package. In umi.qc object, a new assay named logcounts will appear, in addition to the previously present counts and logcounts_raw
+
+```{r}
+umi <- readRDS("inst/data/tung/umi.rds")
+umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
+qclust <- quickCluster(umi.qc, min.size = 30)
+umi.qc <- computeSumFactors(umi.qc, clusters = qclust)
+umi.qc <- logNormCounts(umi.qc)
+
+umi.qc
+```
+
+Combat - 
+If you have an experiment with a balanced design, ComBat can be used to eliminate batch effects while preserving biological effects by specifying the biological effects using the mod parameter. However the Tung data contains multiple experimental replicates rather than a balanced design so using mod to preserve biological variability will result in an error
+
+```{r}
+?ComBat
+assay(umi.qc, "combat") <- ComBat(logcounts(umi.qc),batch = umi.qc$replicate)
+```
+
+Exercise 1
+
+Perform ComBat correction accounting for total features as a co-variate. Store the corrected matrix in the combat_tf slot
+```{r}
+assay(umi.qc, "combat_tf") <- ComBat(logcounts(umi.qc),batch = umi.qc$detected)
+```
+
+re-read - 6.6.5 Evaluation and Comparison of Batch-removal Approaches
+
+NOTE: Separation of biological samples and interspersed batches indicates that technical variation has been removed
+
+**BY THIS MEASURE**, it looks like `combat` did the job!! Look at PCA plots under "Effectiveness 1"
+
+# 7 Biological Analysis
+
+Once we have normalized the data and removed confounders we can carry out analyses that are relevant to the biological questions at hand
+
+Start with clustering
+
+**One of the most promising applications of scRNA-seq is de novo discovery and annotation of cell-types based on transcription profiles**
+
+**When working with large datasets, it can often be beneficial to apply some sort of dimensionality reduction method. By projecting the data onto a lower-dimensional sub-space, one is often able to significantly reduce the amount of noise**
+
+To compare two sets of clustering labels we can use adjusted Rand index. The index is a measure of the similarity between two data clusterings. Values of the adjusted Rand index lie in [0;1] interval, where 1 means that two clusterings are identical and 0 means the level of similarity expected by chance
+
+Re-read the clustering section - show how to use `SINCERA`
+
+## 7.3 Differential Expression (DE) Analysis
+
+Unlike bulk RNA-seq, we generally have a large number of samples (i.e. cells) for each group we are comparing in single-cell experiments. Thus we can take advantage of the whole distribution of expression values in each group to identify differences between groups rather than only comparing estimates of mean-expression as is standard for bulk RNASeq
+
+## 7.4 DE in a Real Dataset (Tung!!)
+
+```{r}
+DE <- read.table("inst/data/tung/TPs.txt")
+notDE <- read.table("inst/data/tung/TNs.txt")
+GroundTruth <- list(
+    DE = as.character(unlist(DE)), 
+    notDE = as.character(unlist(notDE))
+)
+```
+
+This ground truth has been produce **for the comparison of individual NA19101 to NA19239**. Now load the respective single-cell data
+
+```{r}
+molecules <- read.table("inst/data/tung/molecules.txt", sep = "\t")
+anno <- read.table("inst/data/tung/annotation.txt", sep = "\t", header = TRUE)
+keep <- anno[, 1] == "NA19101" | anno[,1] == "NA19239"
+data <- molecules[, keep]
+group <- anno[keep, 1]
+batch <- anno[keep, 4]
+# remove genes that aren't expressed in at least 6 cells
+gkeep <- rowSums(data > 0) > 5;
+counts <- data[keep, ]
+# Library size normalization
+lib_size = colSums(counts)
+norm <- t(t(counts)/lib_size * median(lib_size)) 
+# Variant of CPM for datasets with library sizes of fewer than 1 mil molecules
+
+# NOTE: repeat but with one of the previous normalization approaches
+```
+
+Now we will compare various single-cell DE methods. Note that we will only be running methods which are available as R-packages and run relatively quickly
+
+### 7.4.2 Kolmogorov-Smirnov Test
+
+The types of test that are easiest to work with are non-parametric ones. The most commonly used non-parametric test is the Kolmogorov-Smirnov test (KS-test) and we can use it to compare the distributions for each gene in the two individuals. The KS-test quantifies the distance between the empirical cummulative distributions of the expression of each gene in each of the two populations. It is sensitive to changes in mean experession and changes in variability. However it assumes data is continuous and may perform poorly when data contains a large number of identical values (eg. zeros). Another issue with the KS-test is that it can be very sensitive for large sample sizes and thus it may end up as significant even though the magnitude of the difference is very small
+
+```{r}
+pVals <- apply(
+    norm, 1, function(x) {
+        ks.test(
+            x[group == "NA19101"], 
+            x[group == "NA19239"]
+        )$p.value
+    }
+)
+# multiple testing correction
+pVals <- p.adjust(pVals, method = "fdr")
+```
+
+This code “applies” the function to each row (specified by 1) of the expression matrix, data. In the function we are returning just the p.value from the ks.test output. We can now consider how many of the ground truth positive and negative DE genes are detected by the KS-test
+
+```{r}
+sigDE <- names(pVals)[pVals < 0.05]
+length(sigDE) 
+
+# Number of KS-DE genes
+sum(GroundTruth$DE %in% sigDE) 
+
+# Number of KS-DE genes that are true DE genes
+sum(GroundTruth$notDE %in% sigDE)
+```
+
+As you can see many more of our ground truth negative genes were identified as DE by the KS-test (false positives) than ground truth positive genes (true positives), however this may be due to the larger number of notDE genes thus we typically normalize these counts as the True positive rate (TPR), TP/(TP + FN), and False positive rate (FPR), FP/(FP+TP)
+
+```{r}
+tp <- sum(GroundTruth$DE %in% sigDE)
+fp <- sum(GroundTruth$notDE %in% sigDE)
+tn <- sum(GroundTruth$notDE %in% names(pVals)[pVals >= 0.05])
+fn <- sum(GroundTruth$DE %in% names(pVals)[pVals >= 0.05])
+tpr <- tp/(tp + fn)
+fpr <- fp/(fp + tn)
+cat(c(tpr, fpr))
+```
+
+**Now we can see the TPR is much higher than the FPR indicating the KS test is identifying DE genes**
+
+So far we’ve only evaluated the performance at a single significance threshold. Often it is informative to vary the threshold and evaluate performance across a range of values. This is then plotted as a receiver-operating-characteristic curve (ROC) and a general accuracy statistic can be calculated as the area under this curve (AUC). We will use the ROCR package to facilitate this plotting
+
+```{r}
+# Only consider genes for which we know the ground truth
+pVals <- pVals[names(pVals) %in% GroundTruth$DE | 
+               names(pVals) %in% GroundTruth$notDE] 
+truth <- rep(1, times = length(pVals));
+truth[names(pVals) %in% GroundTruth$DE] = 0;
+pred <- ROCR::prediction(pVals, truth)
+perf <- ROCR::performance(pred, "tpr", "fpr")
+ROCR::plot(perf)
+
+aucObj <- ROCR::performance(pred, "auc")
+aucObj@y.values[[1]] # AUC
+# 0.79
+```
+
+Read on for additional DE approaches
+There are TONS - https://www.nature.com/articles/nmeth.4612 (36 methods tested!!)
+They've also made a Shiny app to compare and contrast methods
+And here's the code for all their approaches - https://github.com/csoneson/conquer_comparison/tree/master/scripts
+
+Apparently, DESeq2 doesn't work so well
+```{r}
+library(DESeq2)
+?DESeqDataSetFromMatrix
+
+dds <- DESeqDataSetFromMatrix(countData = counts, 
+                              colData = data.frame(condition = group), 
+                              design = ~condition)
+
+dds <- DESeq(dds) # takes a while to run (~1 min)
+res <- results(dds)
+
+plotDispEsts(dds)
+plotMA(res)
+summary(res)
+
+res %>% 
+  as_tibble(rownames = "ENSEMBL") %>% 
+  dplyr::arrange(padj) %>% 
+  dplyr::filter(padj < 0.05) %>% 
+  pull(ENSEMBL) -> deg_list
+
+res %>% 
+  as_tibble(rownames = "ENSEMBL") %>% 
+  dplyr::arrange(padj) %>% 
+  dplyr::filter(padj > 0.05) %>% 
+  pull(ENSEMBL) -> non_deg_list
+
+tp <- sum(GroundTruth$DE %in% deg_list)
+fp <- sum(GroundTruth$notDE %in% deg_list)
+tn <- sum(GroundTruth$notDE %in% non_deg_list)
+fn <- sum(GroundTruth$DE %in% non_deg_list)
+tpr <- tp/(tp + fn)
+fpr <- fp/(fp + tn)
+cat(c(tpr, fpr)) # pretty decent?
+
+# Only consider genes for which we know the ground truth
+res %>% 
+  as_tibble(rownames = "ENSEMBL") %>% 
+  dplyr::select(ENSEMBL, padj) %>% 
+  drop_na() -> res_select
+
+res_list <- deframe(res_select)
+
+res_list <- res_list[names(res_list) %in% GroundTruth$DE | 
+                     names(res_list) %in% GroundTruth$notDE] 
+truth <- rep(1, times = length(res_list));
+truth[names(res_list) %in% GroundTruth$DE] = 0;
+pred <- ROCR::prediction(res_list, truth)
+perf <- ROCR::performance(pred, "tpr", "fpr")
+ROCR::plot(perf)
+
+aucObj <- ROCR::performance(pred, "auc")
+aucObj@y.values[[1]] # 0.82
+```
+
+# Conversion to Seurat
+
+https://satijalab.org/seurat/archive/v3.1/conversion_vignette.html
+
+```{r}
+umi.seurat <- as.Seurat(umi.qc, data = NULL)
+umi.seurat
+
+RidgePlot(umi.seurat, features = "ENSG00000187634", assay = "logcounts")
+```
+

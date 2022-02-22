@@ -1,0 +1,306 @@
+---
+title: "Intro to scRNA-seq(Answers)"
+author: "Your name"
+date: "Feb 23, 2022"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "BiocManager",
+  "remotes",
+  "tidyverse",
+  "scales",
+  "ROCR"
+  )
+
+bioc_pkgs <- c(
+  "Biobase",
+  "SingleCellExperiment",
+  "DropletUtils",
+  "scater",
+  "AnnotationDbi",
+  "org.Hs.eg.db",
+  "EnsDb.Hsapiens.v86",
+  "scran",
+  "sva",
+  "batchelor"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+
+# Install and load Bioconductor packages
+installBiocifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        BiocManager::install(pckgName)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(bioc_pkgs, installBiocifnot)
+
+remotes::install_github("hemberg-lab/scRNA.seq.funcs")
+remotes::install_github('theislab/kBET')
+
+library(scRNA.seq.funcs)
+library(kBET)
+```
+
+# Resources
+
+Source - https://www.singlecellcourse.org/scrna-seq-analysis-with-bioconductor.html
+This is the book we will use as our reference for this walkthrough
+
+Download files from - https://singlecellcourse.cog.sanger.ac.uk/index.html?prefix=data/
+
+Here's an AMAZING description of UMIs, barcodes, sequencing details, and how the count matrix is made - https://github.com/hbctraining/scRNA-seq/blob/master/lessons/02_SC_generation_of_count_matrix.md
+
+Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
+
+# Creating a `SingleCellExperiment` object
+
+Corresponds to section - 5.2.1 Creating SCE Objects
+
+```{r}
+tung_counts <- read.table("inst/data/tung/molecules.txt", sep = "\t")
+tung_annotation <- read.table("inst/data/tung/annotation.txt", sep = "\t", header = TRUE)
+
+# inspect data
+dim(tung_counts) # 19027 genes   864 cells
+dim(tung_annotation) # 864 5. Information on individual cells
+
+# What is the relationship between the two objects above?
+
+# note that the data passed to the assay slot has to be a matrix!
+tung <- SingleCellExperiment(
+  assays = list(counts = as.matrix(tung_counts)),
+  colData = tung_annotation
+)
+
+# remove the original tables as we don't need them anymore
+rm(tung_counts, tung_annotation)
+
+tung # just like a SummarizedExperiment object!!
+
+# Accessor functions
+rowData(tung) # Table of gene metadata
+colData(tung) # Table of cell metadata
+assay(tung, "counts") # The assay named "counts"
+tung$individual # Accessing particular columns from colData
+tung[1, 2] # can subset just like a dataframe
+```
+
+Exercise
+```{r}
+# How many batches and cells per batch are there? Does that number make sense?
+colData(tung) %>% 
+  as_tibble() %>% 
+  dplyr::count(batch) # 9 batches of 96 cells
+
+9 * 96 == dim(tung)[2] # TRUE
+
+# book solution
+table(tung$batch)
+?table
+
+# This number of cells per batch suggests that the protocol was done on 96-well plates, so the authors used a low-throughput method for their experiment
+```
+
+# Modifying a `SingleCellExperiment` object 
+
+Corresponds to section - 5.2.2 Modifying SCE Objects
+
+```{r}
+assay(tung, "logcounts") <- log2(counts(tung) + 1)
+tung # now we have two assays
+
+# first 10 rows and 4 columns of the logcounts assay
+assay(tung, "logcounts")[1:10, 1:5]
+
+# Helper functions for accessing different assays
+# to access count data
+counts(tung)
+
+# to access logcounts data
+logcounts(tung)
+```
+
+# Matrix Statistics
+
+Corresponds to section - 5.2.3 Matrix Statistics
+
+```{r}
+# calculate the mean counts per cell (i.e. per column)
+
+# what happens when you use the base R `mean()` function?
+mean(counts(tung)) # only one value!
+
+# use colMeans()
+colMeans(counts(tung)) %>% length() # equal to the number of cells!
+
+# We could add this information to our column metadata as a new column, which we could do as:
+colData(tung)$mean_counts <- colMeans(counts(tung))
+
+colData(tung)
+```
+
+Exercise
+```{r}
+# Add a new column to colData named “total_counts” with the sum of counts in each cell
+colData(tung)$total_counts <- colSums(counts(tung))
+
+# Create a new assay called “cpm” (Counts-Per-Million), which contains the result of dividing the counts matrix by the total counts in millions
+
+# book's answer
+assay(tung, "cpm") <- counts(tung)/tung$total_counts/1e6
+
+# Note that we’re dividing a matrix (counts(tung)) by a vector (tung$total_counts). R will do this division row-by-row, and “recycles” the tung$total_counts vector each time it starts a new row of the counts(tung) matrix
+
+# R does matrix-vector division COLUMN-BY-COLUMN!! 
+# For more on this, refer to - https://www.geeksforgeeks.org/divide-each-row-of-matrix-by-vector-elements-in-r/
+
+# My answer
+assay(tung, "cpm") <- sweep(counts(tung), 2, tung$total_counts, "/")/1e6
+
+# How can you access this new assay?
+assay(tung, "cpm") 
+# or
+cpm(tung)
+```
+
+# Subsetting a `SingleCellExperiment` object
+
+
+Corresponds to section - 5.2.4 Subsetting SCE Objects
+
+```{r}
+# A few examples
+# subset by numeric index
+tung[1:3, ] # the first 3 genes, keep all cells
+tung[, 1:3] # the first 3 cells, keep all genes
+tung[1:3, 1:2] # the first 3 genes and first 2 cells
+
+# subset by name
+tung[c("ENSG00000069712", "ENSG00000237763"), ]
+tung[, c("NA19098.r1.A01", "NA19098.r1.A03")]
+tung[c("ENSG00000069712", "ENSG00000237763"), c("NA19098.r1.A01", "NA19098.r1.A03")]
+
+# conditional subsetting
+# calculate the mean counts per gene
+gene_means <- rowMeans(counts(tung))
+
+# print the first 10 values
+gene_means[1:10]
+length(gene_means)
+
+# We can use such a logical vector inside [ to filter our data, which will return only the cases where the value is TRUE:
+
+tung[gene_means > 0.01, ] %>% dim()
+
+# Another common use case is to retain cells with a certain number of genes above a certain threshold of expression. For this question, we need to break the problem into parts. First let’s check in our counts matrix, which genes are expressed above a certain threshold:
+
+# counts of at least 1
+counts(tung) > 0
+
+# We can see that our matrix is now composed of only TRUE/FALSE values. Because TRUE/FALSE are encoded as 1/0, we can use colSums() to calculate the total number of genes above this threshold per cell:
+
+# total number of detected genes per cell
+total_detected_per_cell <- colSums(counts(tung) > 0)
+
+# print the first 10 values
+total_detected_per_cell[1:10]
+
+# Finally, we can use this vector to apply our final condition, for example that we want cells with at least 5000 detected genes:
+
+tung[, total_detected_per_cell > 5000] %>% dim()
+```
+
+Exercise
+
+1. Create a new object called tung_filtered which contains:
+ - cells with at least 25000 total counts
+ - genes that have more than 5 counts in at least half of the cells
+2. How many cells and genes are you left with?
+```{r}
+cell_filter <- colSums(counts(tung)) >= 25000
+
+# check how many TRUE/FALSE have
+table(cell_filter)
+
+gene_filter <- rowSums(counts(tung) > 5) > ncol(tung)/2
+
+# check how many TRUE/FALSE have
+table(gene_filter)
+
+tung_filtered <- tung[gene_filter, cell_filter]
+
+tung_filtered
+```
+
+# Visual Data Exploration
+
+Corresponds to section - 5.2.5 Visual Data Exploration
+
+```{r}
+# need to first convert to dataframe
+cell_info <- as.data.frame(colData(tung))
+
+head(cell_info)
+
+ggplot(data = cell_info, aes(x = batch, y = total_counts)) +
+  geom_violin(fill = 'brown') + theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+From the book - 
+"What if we wanted to visualise the distribution of expression of a particular gene in each batch? This now gets a little more complicated, because the gene expression information is stored in the counts assay of our SCE, whereas the batch information is in the colData. To bring both of these pieces of information together would require us to do a fair amount of data manipulation to put it all together into a single data.frame. This is where the `scater` package is very helpful, as it provides us with the `ggcells()` function that let’s us specify all these pieces of information for our plot"
+
+```{r}
+# reproduce previous plot using `ggcells()`
+ggcells(tung, aes(x = batch, y = total_counts)) + 
+  geom_violin(fill = 'brown') + theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+?ggcells
+# note that the default assay used is logcounts!!
+
+# Plot the expression for just 
+ggcells(tung, aes(x = batch, y = ENSG00000198938)) + 
+  geom_violin(fill = 'coral2') + theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
