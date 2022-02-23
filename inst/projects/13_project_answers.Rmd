@@ -1,5 +1,5 @@
 ---
-title: "Intro to scRNA-seq(Answers)"
+title: "Intro to scRNA-seq"
 author: "Your name"
 date: "Feb 23, 2022"
 
@@ -96,8 +96,8 @@ Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
 Corresponds to section - 5.2.1 Creating SCE Objects
 
 ```{r}
-tung_counts <- read.table("inst/data/tung/molecules.txt", sep = "\t")
-tung_annotation <- read.table("inst/data/tung/annotation.txt", sep = "\t", header = TRUE)
+tung_counts <- read.table("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/tung/molecules.txt", sep = "\t")
+tung_annotation <- read.table("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/tung/annotation.txt", sep = "\t", header = TRUE)
 
 # inspect data
 dim(tung_counts) # 19027 genes   864 cells

@@ -1,5 +1,5 @@
 ---
-title: "Intro to scRNA-seq"
+title: "Intro to scRNA-seq(Answers)"
 author: "Your name"
 date: "Feb 23, 2022"
 
@@ -96,12 +96,11 @@ Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
 Corresponds to section - 5.2.1 Creating SCE Objects
 
 ```{r}
-tung_counts <- read.table("inst/data/tung/molecules.txt", sep = "\t")
-tung_annotation <- read.table("inst/data/tung/annotation.txt", sep = "\t", header = TRUE)
+tung_counts <- read.table("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/tung/molecules.txt", sep = "\t")
+tung_annotation <- read.table("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/tung/annotation.txt", sep = "\t", header = TRUE)
 
 # inspect data
-dim(tung_counts) # 19027 genes   864 cells
-dim(tung_annotation) # 864 5. Information on individual cells
+
 
 # What is the relationship between the two objects above?
 
@@ -127,14 +126,12 @@ tung[1, 2] # can subset just like a dataframe
 Exercise
 ```{r}
 # How many batches and cells per batch are there? Does that number make sense?
-colData(tung) %>% 
-  as_tibble() %>% 
-  dplyr::count(batch) # 9 batches of 96 cells
+
 
 9 * 96 == dim(tung)[2] # TRUE
 
 # book solution
-table(tung$batch)
+
 ?table
 
 # This number of cells per batch suggests that the protocol was done on 96-well plates, so the authors used a low-throughput method for their experiment
@@ -153,10 +150,10 @@ assay(tung, "logcounts")[1:10, 1:5]
 
 # Helper functions for accessing different assays
 # to access count data
-counts(tung)
+
 
 # to access logcounts data
-logcounts(tung)
+
 ```
 
 # Matrix Statistics
@@ -167,26 +164,26 @@ Corresponds to section - 5.2.3 Matrix Statistics
 # calculate the mean counts per cell (i.e. per column)
 
 # what happens when you use the base R `mean()` function?
-mean(counts(tung)) # only one value!
+
 
 # use colMeans()
-colMeans(counts(tung)) %>% length() # equal to the number of cells!
+
 
 # We could add this information to our column metadata as a new column, which we could do as:
-colData(tung)$mean_counts <- colMeans(counts(tung))
 
-colData(tung)
+
+
 ```
 
 Exercise
 ```{r}
 # Add a new column to colData named “total_counts” with the sum of counts in each cell
-colData(tung)$total_counts <- colSums(counts(tung))
+
 
 # Create a new assay called “cpm” (Counts-Per-Million), which contains the result of dividing the counts matrix by the total counts in millions
 
 # book's answer
-assay(tung, "cpm") <- counts(tung)/tung$total_counts/1e6
+
 
 # Note that we’re dividing a matrix (counts(tung)) by a vector (tung$total_counts). R will do this division row-by-row, and “recycles” the tung$total_counts vector each time it starts a new row of the counts(tung) matrix
 
@@ -194,12 +191,12 @@ assay(tung, "cpm") <- counts(tung)/tung$total_counts/1e6
 # For more on this, refer to - https://www.geeksforgeeks.org/divide-each-row-of-matrix-by-vector-elements-in-r/
 
 # My answer
-assay(tung, "cpm") <- sweep(counts(tung), 2, tung$total_counts, "/")/1e6
+
 
 # How can you access this new assay?
-assay(tung, "cpm") 
+
 # or
-cpm(tung)
+
 ```
 
 # Subsetting a `SingleCellExperiment` object
@@ -256,19 +253,15 @@ Exercise
  - genes that have more than 5 counts in at least half of the cells
 2. How many cells and genes are you left with?
 ```{r}
-cell_filter <- colSums(counts(tung)) >= 25000
+
 
 # check how many TRUE/FALSE have
-table(cell_filter)
 
-gene_filter <- rowSums(counts(tung) > 5) > ncol(tung)/2
+
+
 
 # check how many TRUE/FALSE have
-table(gene_filter)
 
-tung_filtered <- tung[gene_filter, cell_filter]
-
-tung_filtered
 ```
 
 # Visual Data Exploration
