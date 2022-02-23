@@ -1,5 +1,5 @@
 ---
-title: "Intro to scRNA-seq(Answers)"
+title: "Intro to scRNA-seq"
 author: "Your name"
 date: "Feb 23, 2022"
 
