@@ -1,0 +1,341 @@
+---
+title: "scRNA-seq - QC and Exploration"
+author: "Your name"
+date: "Mar 09, 2022"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "BiocManager",
+  "remotes",
+  "tidyverse",
+  "scales",
+  "ROCR"
+  )
+
+bioc_pkgs <- c(
+  "Biobase",
+  "SingleCellExperiment",
+  "DropletUtils",
+  "scater",
+  "AnnotationDbi",
+  "org.Hs.eg.db",
+  "EnsDb.Hsapiens.v86",
+  "scran",
+  "sva",
+  "batchelor"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+
+# Install and load Bioconductor packages
+installBiocifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        BiocManager::install(pckgName)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(bioc_pkgs, installBiocifnot)
+
+remotes::install_github("hemberg-lab/scRNA.seq.funcs")
+remotes::install_github('theislab/kBET')
+
+library(scRNA.seq.funcs)
+library(kBET)
+```
+
+# Resources
+
+Source - https://www.singlecellcourse.org/scrna-seq-analysis-with-bioconductor.html
+This is the book we will use as our reference for this walkthrough (specifically Chapter 6)
+
+A different version of the same book - https://www.stephaniehicks.com/2018-bioinfosummer-scrnaseq/cleaning-the-expression-matrix.html
+
+Download files from - https://singlecellcourse.cog.sanger.ac.uk/index.html?prefix=data/
+
+Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
+
+# 6 Basic Quality Control (QC) and Exploration of scRNA-seq Datasets
+
+```{r}
+molecules <- read.delim("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/tung/molecules.txt", row.names = 1)
+annotation <- read.delim("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/tung/annotation.txt", stringsAsFactors = T)
+?read.delim
+
+# `row.names = 1` ensures that the values in the first column of `molecules.text` become the row names of the resulting `molecules` dataframe
+# setting `stringsAsFactors = T` converts all character vectors to factors
+
+# Take a quick look at data
+head(molecules[, 1:3])
+
+head(annotation)
+
+# Create SingleCellExperiment object
+umi <- SingleCellExperiment(assays = list(counts = as.matrix(molecules)), colData = annotation)
+
+# remove ERCC features from main object
+# What's ERCC? 
+# ERCC refers to the spike-in mix - https://www.thermofisher.com/order/catalog/product/4456740
+
+# What information do the row names of `umi` contain?
+rownames(umi) # ENSEMBL IDs
+
+# How many ERCC spike-ins are there in `umi`?
+sum(str_detect(rownames(umi), "ERCC")) # 89
+
+# First save ERCC info as an "alternative experiment"
+altExp(umi,"ERCC") <- umi[str_detect(rownames(umi), "ERCC"), ]
+
+# now remove ERCC data from main SingleCellExperiment object
+umi <- umi[!str_detect(rownames(umi), "ERCC"), ]
+# check
+sum(str_detect(rownames(umi), "ERCC")) # 0!
+```
+
+Map ENSEMBL IDs to Gene Symbols
+```{r}
+gene_names <- mapIds(org.Hs.eg.db, 
+                     keys = rownames(umi), 
+                     keytype = "ENSEMBL",  
+                     column = "SYMBOL")
+gene_names
+
+# Where to stores these gene names?
+rowData(umi)$SYMBOL <- gene_names
+rowData(umi)
+
+# how many missing gene names are there?
+rowData(umi) %>% 
+  as_tibble() %>% 
+  dplyr::filter(is.na(SYMBOL)) %>% 
+  nrow() 
+
+# or
+table(is.na(gene_names))
+
+# Remove all genes for which no symbols were found
+umi <- umi[!is.na(rowData(umi)$SYMBOL), ]
+
+# How many mitochondrial genes are there?
+sum(str_detect(rowData(umi)$SYMBOL, "^MT-")) # 0??
+
+# Quick search for mitochondrial protein ATP8, which is also called MT-ATP8, shows that the name does not contain “MT-.” However, the correct feature (ENSEMBL ID ENSG00000228253) is present in our annotation
+str_subset(rowData(umi)$SYMBOL, "ATP8")
+
+# Let’s try a different, more detailed database - EnsDb.Hsapiens.v86. Using this resource, we can find 13 protein-coding genes located in the mitochondrion:
+
+ensdb_genes <- genes(EnsDb.Hsapiens.v86)
+mt_names <- ensdb_genes %>% 
+              as_tibble() %>% 
+              dplyr::filter(seqnames == "MT") %>% 
+              dplyr::pull(gene_id)
+# or
+MT_names <- ensdb_genes[seqnames(ensdb_genes) == "MT"]$gene_id
+
+# Are `mt_names` and `MT_names` the same?
+identical(MT_names, mt_names) # TRUE!
+
+is_mito <- rownames(umi) %in% MT_names
+is_mito
+table(is_mito)
+```
+
+Basic QC
+
+The following `scater` functions allow us to add per-cell and per-gene metrics useful for dataset evaluation. Most popular metrics per cell are total number of counts (UMIs), total number of detected genes, total number of mitochondrial counts, percent of mitochondrial counts, etc
+```{r}
+?perCellQCMetrics # look at examples
+umi_cell <- perCellQCMetrics(umi, subsets = list(Mito = is_mito))
+umi_cell
+# sum - the sum of counts for each cell
+# detected - the number of observations above threshold (default is 0)
+
+?perFeatureQCMetrics
+umi_feature <- perFeatureQCMetrics(umi)
+umi_feature
+# mean - the mean counts for each feature
+# detected - the percentage of observations above threshold (default is 0)
+
+# Note that we have two things named `detected` that refer to DIFFERENT THINGS!
+
+# We can now use the functions that add the metrics calculated above to per-cell and per-gene metadata:
+
+umi <- addPerCellQC(umi, subsets = list(Mito = is_mito))
+umi <- addPerFeatureQC(umi)
+
+colData(umi) # now contains `umi_cell` info
+rowData(umi) # now contains `umi_feature` info
+
+# distribution of total counts
+colData(umi) %>% 
+  as_tibble() %>% 
+  ggplot(aes(sum)) +
+  geom_histogram(bins = 100) +
+  geom_vline(xintercept = 25000, col = "red")
+
+# distribution of the number of unique detected genes
+colData(umi) %>% 
+  as_tibble() %>% 
+  ggplot(aes(detected)) +
+  geom_histogram(bins = 100) +
+  geom_vline(xintercept = 7000, col = "red")
+
+# Sometimes it’s hard to come up with an obvious filtering cutoff. In this case, adaptive threshold can help us identify points that are more than 3 median absolute deviations (MADs) away from the median in any of the variables we use for QC
+
+# Be careful to specify if the correct direction of the deviation: indeed, low number of detected genes, but high MT gene percentage, are hallmarks of a low quality cell:
+
+# What is MAD -
+# https://www.statisticshowto.com/median-absolute-deviation/
+
+# Why use it? For non-normal data, MAD is a better measure of spread than SD
+
+?isOutlier
+qc.lib2 <- isOutlier(umi_cell$sum, log = TRUE, type = "lower")
+qc.lib2
+#  Wells with few reads/molecules are likely to have been broken or failed to capture a cell, and should thus be removed
+
+qc.nexprs2 <- isOutlier(umi_cell$detected, log = TRUE, type = "lower")
+# Cells with with too few unique genes should also be removed
+
+qc.spike2 <- isOutlier(umi_cell$altexps_ERCC_percent, type = "higher")
+# Another measure of cell quality is the ratio between ERCC spike-in RNAs and endogenous RNAs. This ratio can be used to estimate the total amount of RNA in the captured cells. Cells with a high level of spike-in RNAs had low starting amounts of RNA, likely due to the cell being dead or stressed which may result in the RNA being degraded
+
+qc.mito2 <- isOutlier(umi_cell$subsets_Mito_percent, type = "higher")
+# High mitochondrial gene expression could be indicative of apoptosing cells
+
+discard2 <- qc.lib2|qc.nexprs2|qc.spike2|qc.mito2
+
+# all of this can be done using `quickPerCellQC`!!
+?quickPerCellQC
+
+reasons <- quickPerCellQC(umi_cell, 
+                          sub.fields = 
+                          c("subsets_Mito_percent", "altexps_ERCC_percent"))
+reasons
+colSums(as.matrix(reasons))
+
+# Let’s add another metadata column that would keep the information about whether a cell is discarded or not:
+
+umi$discard <- reasons$discard
+colData(umi)
+
+# Plotting various coldata (cell-level medadata) assays against each other allows us to illustrate the dependencies between them. For example, cells with high mitochondrial content usually are considered dead or dying; these cells also usually have low overall UMI counts and number of detected genes
+
+plotColData(umi, 
+            x = "sum", 
+            y = "subsets_Mito_percent", 
+            colour_by = "discard")
+?plotColData
+
+plotColData(umi, 
+            x = "sum", 
+            y = "detected", 
+            colour_by = "discard")
+
+plotColData(umi,
+            x = "altexps_ERCC_percent", 
+            y = "subsets_Mito_percent",
+            colour_by = "discard")
+```
+
+Get rid of weakly-expressed genes - 
+keep the genes which were detected (expression value > 1) in 2 or more cells
+```{r}
+?nexprs
+keep_feature <- nexprs(umi, byrow = TRUE, detection_limit = 1) >= 2
+keep_feature
+
+rowData(umi)$discard <- !keep_feature
+table(rowData(umi)$discard)
+
+# Notice we have a column named "discard" for BOTH row data AND column data
+rowData(umi)
+colData(umi)
+
+# remove unwanted cells and genes
+umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
+
+# don't forget the `!`
+```
+
+Data Visualization and Dimensionality Reduction
+
+Log-transform data
+```{r}
+assay(umi, "logcounts_raw") <- log2(counts(umi) + 1)
+```
+
+Principal Component Analysis - Figure 6.1 shows a nice example of PCA
+
+```{r}
+# Run PCA on raw count data
+?runPCA
+
+umi <- runPCA(umi, exprs_values = "counts")
+umi
+
+plotPCA(umi, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+Note - Without log-transformation or normalization, PCA plot fails to separate the datasets by replicate or individual. We mostly see the effects of sequencing depth - samples (cells) with lots of expression, and particularly highly expressed genes, dominate the PCs
+
+With log-transformation, we equalize the large difference between strongly and weakly expressed genes, and immediately see cells form groups by replicate, individual, and sequencing depth. When PCA is re-run, `reducedDim` object in `umi` is overwritten
+
+```{r}
+umi <- runPCA(umi, exprs_values = "logcounts_raw")
+plotPCA(umi, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+**WARNING!!!** - note that just a log-transformation is not enough to account for different technical factors between the cells (e.g. sequencing depth). Therefore, please do not use logcounts_raw for your downstream analysis, instead as a minimum suitable data use the logcounts slot of the SingleCellExperiment object, which not just log-transformed, but also normalised by library size (e.g. CPM normalisation). In the course we use logcounts_raw only for demonstration purposes!
+
+PCA after QC
+```{r}
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts_raw")
+plotPCA(umi.qc, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
+Comparing figures above, it is clear that after quality control the NA19098.r2 cells no longer form a group of outliers (is it??)
+
+Identifying Confounding Factors
+```{r}
+plotExplanatoryPCs(umi.qc, variables = "detected") 
+getExplanatoryPCs(umi.qc, variables = "detected")
+```
+
+Indeed, we can see that PC1 can be almost completely explained by the number of detected genes. In fact, it was also visible on the PCA plot above. This is a well-known issue in scRNA-seq and was described in [Hicks et al. 2018](https://www.biorxiv.org/content/10.1101/025528v3)
