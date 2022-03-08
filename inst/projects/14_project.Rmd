@@ -161,6 +161,8 @@ str_subset(rowData(umi)$SYMBOL, "ATP8")
 # Let’s try a different, more detailed database - EnsDb.Hsapiens.v86. Using this resource, we can find 13 protein-coding genes located in the mitochondrion:
 
 ensdb_genes <- genes(EnsDb.Hsapiens.v86)
+# This package loads an SQL connection to a database containing annotations from Ensembl
+
 mt_names <- ensdb_genes %>% 
               as_tibble() %>% 
               dplyr::filter(seqnames == "MT") %>% 
