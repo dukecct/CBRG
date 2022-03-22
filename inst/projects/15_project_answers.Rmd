@@ -92,7 +92,7 @@ Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
 # Normalization using scran
 
 ```{r}
-umi <- readRDS("inst/data/tung/umi.rds")
+umi <- readRDS("https://raw.githubusercontent.com/dukecct/CBRG/main/inst/data/tung/umi.rds")
 umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
 umi.qc
 qclust <- quickCluster(umi.qc, min.size = 30) 
