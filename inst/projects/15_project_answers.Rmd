@@ -92,7 +92,7 @@ Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
 # Normalization using scran
 
 ```{r}
-umi <- readRDS("data/tung/umi.rds")
+umi <- readRDS(paste0(find.package("CBRG"), "/data/tung/umi.rds"))
 umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
 umi.qc
 qclust <- quickCluster(umi.qc, min.size = 30) 
@@ -145,8 +145,8 @@ plotRLE(umi.qc, exprs_values = "combat", colour_by = "batch")
 
 # Differential Expression Analysis
 ```{r}
-DE <- read.table("data/tung/TPs.txt")
-notDE <- read.table("data/tung/TNs.txt")
+DE <- read.table(paste0(find.package("CBRG"), "/data/tung/TPs.text"))
+notDE <- read.table(paste0(find.package("CBRG"), "/data/tung/TNs.txt"))
 GroundTruth <- list(
     DE = as.character(unlist(DE)), 
     notDE = as.character(unlist(notDE))
