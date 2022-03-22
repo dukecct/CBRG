@@ -1,0 +1,217 @@
+---
+title: "scRNA-seq - Normalization, Batch Correction, and Differential Expression (Answers)"
+author: "Your name"
+date: "Mar 23, 2022"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "BiocManager",
+  "remotes",
+  "tidyverse",
+  "scales",
+  "ROCR"
+  )
+
+bioc_pkgs <- c(
+  "Biobase",
+  "SingleCellExperiment",
+  "DropletUtils",
+  "scater",
+  "AnnotationDbi",
+  "org.Hs.eg.db",
+  "EnsDb.Hsapiens.v86",
+  "scran",
+  "sva",
+  "batchelor"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+
+# Install and load Bioconductor packages
+installBiocifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        BiocManager::install(pckgName)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(bioc_pkgs, installBiocifnot)
+
+remotes::install_github("hemberg-lab/scRNA.seq.funcs")
+remotes::install_github('theislab/kBET')
+
+library(scRNA.seq.funcs)
+library(kBET)
+```
+
+# Resources
+
+Source - https://www.singlecellcourse.org/scrna-seq-analysis-with-bioconductor.html
+This is the book we will use as our reference for this walkthrough (specifically Chapters 6 and 7)
+
+Download files from - https://singlecellcourse.cog.sanger.ac.uk/index.html?prefix=data/
+
+Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
+
+# Normalization using scran
+
+```{r}
+umi <- readRDS("inst/data/tung/umi.rds")
+umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
+umi.qc
+qclust <- quickCluster(umi.qc, min.size = 30) 
+umi.qc <- computeSumFactors(umi.qc, clusters = qclust)
+umi.qc <- logNormCounts(umi.qc)
+umi.qc
+
+# PCA plots
+# using raw count data
+umi.qc <- runPCA(umi.qc, exprs_values = "counts")
+plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
+# using log-tranformed data
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts_raw")
+plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
+# using scran-normalized data
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts")
+plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
+
+# Alternative viz
+# RLE plots
+plotRLE(umi.qc, exprs_values = "counts", colour_by = "replicate")
+plotRLE(umi.qc, exprs_values = "logcounts_raw", colour_by = "replicate")
+plotRLE(umi.qc, exprs_values = "logcounts", colour_by = "replicate")
+
+# conclusion - scran normalization largely corrects for techincal effects
+```
+
+# Batch correction using ComBat
+```{r}
+assay(umi.qc, "combat") <- ComBat(logcounts(umi.qc), 
+                                  batch = umi.qc$replicate)
+
+# PCA plots
+# before ComBat
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts")
+plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
+
+# after ComBat
+umi.qc <- runPCA(umi.qc, exprs_values = "combat")
+plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
+
+# RLE plots
+# before ComBat
+plotRLE(umi.qc, exprs_values = "logcounts", colour_by = "batch")
+# after ComBat
+plotRLE(umi.qc, exprs_values = "combat", colour_by = "batch")
+
+# conclusion - ComBat produces a slight improvement. You now see biological replicates clustering more tightly!
+```
+
+# Differential Expression Analysis
+```{r}
+DE <- read.table("inst/data/tung/TPs.txt")
+notDE <- read.table("inst/data/tung/TNs.txt")
+GroundTruth <- list(
+    DE = as.character(unlist(DE)), 
+    notDE = as.character(unlist(notDE))
+)
+
+# This ground truth has been produced for the comparison of individual NA19101 to NA19239
+
+umi_subset <- umi.qc[ , umi.qc$individual %in% c("NA19101","NA19239")]
+unique(umi_subset$individual) # only two!
+
+df <- as.data.frame(assay(umi_subset, "combat"))
+group <- umi_subset$individual
+
+pVals <- apply(
+    df, 1, function(x) {
+        ks.test(
+            x[group == "NA19101"], 
+            x[group == "NA19239"]
+        )$p.value
+    }
+)
+
+# multiple testing correction
+pVals <- p.adjust(pVals, method = "fdr")
+```
+
+This code “applies” the function to each row (specified by 1) of the expression matrix, data. In the function we are returning just the p.value from the ks.test output. We can now consider how many of the ground truth positive and negative DE genes are detected by the KS-test
+
+```{r}
+sigDE <- names(pVals)[pVals < 0.05]
+length(sigDE) 
+
+sum(GroundTruth$DE %in% sigDE) 
+sum(GroundTruth$notDE %in% sigDE)
+```
+
+As you can see many more of our ground truth negative genes were identified as DE by the KS-test (false positives) than ground truth positive genes (true positives), however this may be due to the larger number of notDE genes thus we typically normalize these counts as the True positive rate (TPR), TP/(TP + FN), and False positive rate (FPR), FP/(FP+TP)
+
+```{r}
+tp <- sum(GroundTruth$DE %in% sigDE)
+fp <- sum(GroundTruth$notDE %in% sigDE)
+tn <- sum(GroundTruth$notDE %in% names(pVals)[pVals >= 0.05])
+fn <- sum(GroundTruth$DE %in% names(pVals)[pVals >= 0.05])
+tpr <- tp/(tp + fn)
+fpr <- fp/(fp + tn)
+cat(c(tpr, fpr))
+```
+
+**Now we can see the TPR is much higher than the FPR indicating the KS test is identifying DE genes**
+
+So far we’ve only evaluated the performance at a single significance threshold. Often it is informative to vary the threshold and evaluate performance across a range of values. This is then plotted as a receiver-operating-characteristic curve (ROC) and a general accuracy statistic can be calculated as the area under this curve (AUC). We will use the ROCR package to facilitate this plotting
+
+```{r}
+# Only consider genes for which we know the ground truth
+pVals <- pVals[names(pVals) %in% GroundTruth$DE | 
+               names(pVals) %in% GroundTruth$notDE] 
+truth <- rep(1, times = length(pVals));
+truth[names(pVals) %in% GroundTruth$DE] = 0;
+pred <- ROCR::prediction(pVals, truth)
+perf <- ROCR::performance(pred, "tpr", "fpr")
+ROCR::plot(perf)
+
+aucObj <- ROCR::performance(pred, "auc")
+aucObj@y.values[[1]] # AUC
+# 0.81
+# Not bad!
+```
+

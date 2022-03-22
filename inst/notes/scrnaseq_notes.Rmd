@@ -564,7 +564,7 @@ umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
 Log transformation makes the data group intuitively (e.g., by individual). However, there is clear dependency on the sequencing depth
 
 ```{r}
-umi.qc <- runPCA(umi.qc,exprs_values = "logcounts_raw")
+umi.qc <- runPCA(umi.qc, exprs_values = "logcounts_raw")
 plotPCA(umi.qc,colour_by = "batch", size_by = "detected", shape_by = "individual")
 ```
 
@@ -598,9 +598,9 @@ plotRLE(umi.qc, exprs_values = "logcounts", colour_by = "batch") + ggtitle("RLE 
 # https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0191629&type=printable
 # Figure 1 makes all of this very clear!
 
-# RLE plots are particularly useful for assessing whether a normalization procedure, i.e. a procedure that attempts to remove unwanted variation, has been successful; a “bad” plot indicates a failure to normalize. It is important to note, however, that achieving an ideal RLE plot after applying a normalization procedure does not necessarily mean the procedure has succeeded. The procedure may have succeeded in removing the unwanted variation, but may have also removed the biological signal of interest, i.e. the differ- ences in expression of a minority of genes. An RLE plot cannot diagnose whether the signal of interest has been removed, only whether significant unwanted variation remains; the plot can- not tell if the baby has been thrown out with the bath water :)
+# RLE plots are particularly useful for assessing whether a normalization procedure, i.e. a procedure that attempts to remove unwanted variation, has been successful; a “bad” plot indicates a failure to normalize. It is important to note, however, that achieving an ideal RLE plot after applying a normalization procedure does not necessarily mean the procedure has succeeded. The procedure may have succeeded in removing the unwanted variation, but may have also removed the biological signal of interest, i.e. the differences in expression of a minority of genes. An RLE plot cannot diagnose whether the signal of interest has been removed, only whether significant unwanted variation remains; the plot cannot tell if the baby has been thrown out with the bath water :)
 
-# The only assumption we need to inter- pret sample heterogeneity in an RLE plot as a sign of unwanted variation is that expression levels of a majority of genes are unaffected by the biological factors of interest. We noted, how- ever, that while this assumption is often plausible, it is sometimes not safe to make, and some- times not even needed
+# The only assumption we need to interpret sample heterogeneity in an RLE plot as a sign of unwanted variation is that expression levels of a majority of genes are unaffected by the biological factors of interest. We noted, however, that while this assumption is often plausible, it is sometimes not safe to make, and sometimes not even needed
 ```
 
 CPM-based and other similar library-wise scaling approaches assume that all cells contain similar amounts of RNA, and hence should produce similar UMI counts. This is not always true. The following method, available in scran and several other bioconductoR packages, uses clustering in order to make normalization. This is sometimes referred to as normalization by deconvolution. First, let’s do a quick-and-dirty clustering. These clusters look conspicuously like our batches!
@@ -638,8 +638,13 @@ summary(sizeFactors(umi.qc))
 
 # For this dataset all the size factors are well-behaved; we will use this normalization for further analysis. If you find scran has calculated negative size factors try increasing the cluster and pool sizes until they are all positive
 
+# For more on how to deal with negative size factors, refer to the 
+# "Dealing with negative size factors" section of ?computeSumFactors
+
 # nice!
 # I think I get what's going on here
+
+# THIS IS A WONDERFUL APPROACH, AND THE ACCOMPANYING PAPER (Lun 2016) DESCRIBES EVERYTHING PERFECTLY!!!
 ```
 
 
@@ -674,14 +679,17 @@ If you have an experiment with a balanced design, ComBat can be used to eliminat
 
 ```{r}
 ?ComBat
-assay(umi.qc, "combat") <- ComBat(logcounts(umi.qc),batch = umi.qc$replicate)
+assay(umi.qc, "combat") <- ComBat(logcounts(umi.qc), batch = umi.qc$replicate)
+
+# THIS produces nice plots, but NOT when you use umi.qc$batch
+# why???
 ```
 
 Exercise 1
 
 Perform ComBat correction accounting for total features as a co-variate. Store the corrected matrix in the combat_tf slot
 ```{r}
-assay(umi.qc, "combat_tf") <- ComBat(logcounts(umi.qc),batch = umi.qc$detected)
+assay(umi.qc, "combat_tf") <- ComBat(logcounts(umi.qc), batch = umi.qc$detected)
 ```
 
 re-read - 6.6.5 Evaluation and Comparison of Batch-removal Approaches
@@ -689,6 +697,27 @@ re-read - 6.6.5 Evaluation and Comparison of Batch-removal Approaches
 NOTE: Separation of biological samples and interspersed batches indicates that technical variation has been removed
 
 **BY THIS MEASURE**, it looks like `combat` did the job!! Look at PCA plots under "Effectiveness 1"
+
+**BUT!!**
+
+Look at this - https://www.stephaniehicks.com/2018-bioinfosummer-scrnaseq/cleaning-the-expression-matrix.html#dealing-with-confounders
+```{r}
+combat_data <- logcounts(umi.qc)
+mod_data <- as.data.frame(t(combat_data))
+# Basic batch removal
+mod0 = model.matrix(~ 1, data = mod_data) 
+
+assay(umi.qc, "combat") <- ComBat(
+    dat = t(mod_data), 
+    batch = factor(umi.qc$batch), 
+    mod = mod0,
+    par.prior = TRUE,
+    prior.plots = FALSE)
+
+umi.qc <- runPCA(umi.qc, exprs_values = "combat")
+plotPCA(umi.qc, colour_by = "batch", size_by = "detected", shape_by = "individual")
+```
+
 
 # 7 Biological Analysis
 
@@ -743,7 +772,11 @@ Now we will compare various single-cell DE methods. Note that we will only be ru
 
 ### 7.4.2 Kolmogorov-Smirnov Test
 
-The types of test that are easiest to work with are non-parametric ones. The most commonly used non-parametric test is the Kolmogorov-Smirnov test (KS-test) and we can use it to compare the distributions for each gene in the two individuals. The KS-test quantifies the distance between the empirical cummulative distributions of the expression of each gene in each of the two populations. It is sensitive to changes in mean experession and changes in variability. However it assumes data is continuous and may perform poorly when data contains a large number of identical values (eg. zeros). Another issue with the KS-test is that it can be very sensitive for large sample sizes and thus it may end up as significant even though the magnitude of the difference is very small
+The types of test that are easiest to work with are non-parametric ones. The most commonly used non-parametric test is the Kolmogorov-Smirnov test (KS-test) and we can use it to compare the distributions for each gene in the two individuals. The KS-test quantifies the distance between the empirical cumulative distributions of the expression of each gene in each of the two populations. It is sensitive to changes in mean experession and changes in variability. However it assumes data is continuous and may perform poorly when data contains a large number of identical values (eg. zeros). Another issue with the KS-test is that it can be very sensitive for large sample sizes and thus it may end up as significant even though the magnitude of the difference is very small
+
+From - https://www.stephaniehicks.com/2018-bioinfosummer-scrnaseq/biological-analysis.html#differential-expression-de-analysis
+
+Unlike bulk RNA-seq, we generally have a large number of samples (i.e. cells) for each group we are comparing in single-cell experiments. Thus we can take advantage of the whole distribution of expression values in each group to identify differences between groups rather than only comparing estimates of mean-expression as is standard for bulk RNA-seq
 
 ```{r}
 pVals <- apply(
