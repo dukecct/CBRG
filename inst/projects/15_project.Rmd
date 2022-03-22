@@ -145,7 +145,7 @@ plotRLE(umi.qc, exprs_values = "combat", colour_by = "batch")
 
 # Differential Expression Analysis
 ```{r}
-DE <- read.table(paste0(find.package("CBRG"), "/data/tung/TPs.text"))
+DE <- read.table(paste0(find.package("CBRG"), "/data/tung/TPs.txt"))
 notDE <- read.table(paste0(find.package("CBRG"), "/data/tung/TNs.txt"))
 GroundTruth <- list(
     DE = as.character(unlist(DE)), 
