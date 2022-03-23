@@ -92,21 +92,50 @@ Tung et al. paper - https://www.nature.com/articles/srep39921.pdf
 # Normalization using scran
 
 ```{r}
+# load Tung dataset
 umi <- readRDS(paste0(find.package("CBRG"), "/data/tung/umi.rds"))
+
+# explore this SingleCellExperiment object
+umi
+rowData(umi)
+colData(umi)
+
+# clean up umi
 umi.qc <- umi[!rowData(umi)$discard, !colData(umi)$discard]
-umi.qc
-qclust <- quickCluster(umi.qc, min.size = 30) 
-umi.qc <- computeSumFactors(umi.qc, clusters = qclust)
-umi.qc <- logNormCounts(umi.qc)
 umi.qc
 
 # PCA plots
 # using raw count data
 umi.qc <- runPCA(umi.qc, exprs_values = "counts")
 plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
-# using log-tranformed data
+# No separation!
+
+# using log-transformed data
 umi.qc <- runPCA(umi.qc, exprs_values = "logcounts_raw")
 plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
+
+# Note that PC1 is dominated by library size
+```
+
+Notes on scran -
+From https://pubmed.ncbi.nlm.nih.gov/27122128/
+
+Existing normalization methods (e.g. DESeq) fail with zero counts. Scran is a normalzation method specifically developed for scRNA-seq data
+
+scran method (brief) - 
+Cluster cells based on library size 
+Create so-called pools of cells from within these clusters and sum up gene counts Create a reference "pseudo-cell" by average across all gene expression 
+Compute pool Size Factors by normalizing summed counts for pools to pseudo-cell Estimate cell Size Factors by solving a large set of linear equations ("deconvolution")
+
+```{r}
+# perform scran normalization
+qclust <- quickCluster(umi.qc, min.size = 30) 
+umi.qc <- computeSumFactors(umi.qc, clusters = qclust)
+colData(umi.qc) # now we have Size Factors!
+umi.qc <- logNormCounts(umi.qc)
+umi.qc # we now have an assay called "logcounts"
+
+# PCA plots
 # using scran-normalized data
 umi.qc <- runPCA(umi.qc, exprs_values = "logcounts")
 plotPCA(umi.qc, colour_by = "replicate", size_by = "detected", shape_by = "individual")
@@ -117,11 +146,37 @@ plotRLE(umi.qc, exprs_values = "counts", colour_by = "replicate")
 plotRLE(umi.qc, exprs_values = "logcounts_raw", colour_by = "replicate")
 plotRLE(umi.qc, exprs_values = "logcounts", colour_by = "replicate")
 
-# conclusion - scran normalization largely corrects for techincal effects
+# conclusion - scran normalization largely corrects for technical effects
 ```
 
+Notes on Relative Log Expression (RLE) plots -
+Paper describing RLE plots - https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0191629
+
+"Unwanted variation can be highly problematic and so its detection is often crucial - RLE plots are a powerful tool for visualizing such variation in high dimensional data"
+
+"RLE plots are particularly useful for assessing whether a procedure aimed at removing unwanted variation, i.e. a normalization procedure, has been useful"
+
+"Unwanted variation - variation caused by technical factors and not by the biology of interest"
+
+Procedure -
+For a given gene, calculate the median expression across all samples. Then compute the differences between expression in each sample and this median. Repeat for all genes
+
+For each sample, generate a boxplot of all the deviations of that sample
+
+BIG ASSUMPTION - Expression levels of a majority of genes are unaffected by biological factors of interest
+
 # Batch correction using ComBat
+
+Notes on ComBat -
+Original ComBat paper - https://pubmed.ncbi.nlm.nih.gov/16632515/
+
+In order to use ComBat, you must have a known batch variable in your dataset
+
+Sobering and informative talk on the hidden dangers of batch effects -
+https://youtu.be/z3vqrkRGSLI
+
 ```{r}
+# Run ComBat using "replicate" as batch covariate
 assay(umi.qc, "combat") <- ComBat(logcounts(umi.qc), 
                                   batch = umi.qc$replicate)
 
@@ -144,6 +199,10 @@ plotRLE(umi.qc, exprs_values = "combat", colour_by = "batch")
 ```
 
 # Differential Expression Analysis
+
+From book -
+"Unlike bulk RNA-seq, we generally have a large number of samples (i.e. cells) for each group we are comparing in single-cell experiments. Thus we can take advantage of the whole distribution of expression values in each group to identify differences between groups rather than only comparing estimates of mean-expression as is standard for bulk RNASeq" 
+
 ```{r}
 DE <- read.table(paste0(find.package("CBRG"), "/data/tung/TPs.txt"))
 notDE <- read.table(paste0(find.package("CBRG"), "/data/tung/TNs.txt"))
@@ -152,14 +211,19 @@ GroundTruth <- list(
     notDE = as.character(unlist(notDE))
 )
 
+GroundTruth$DE
+GroundTruth$notDE
+
 # This ground truth has been produced for the comparison of individual NA19101 to NA19239
 
+# Only keep data for individuals NA19101 and NA19239
 umi_subset <- umi.qc[ , umi.qc$individual %in% c("NA19101","NA19239")]
 unique(umi_subset$individual) # only two!
 
 df <- as.data.frame(assay(umi_subset, "combat"))
 group <- umi_subset$individual
 
+# Perform KS test
 pVals <- apply(
     df, 1, function(x) {
         ks.test(
@@ -168,21 +232,25 @@ pVals <- apply(
         )$p.value
     }
 )
+?apply
 
 # multiple testing correction
-pVals <- p.adjust(pVals, method = "fdr")
+pVals <- p.adjust(pVals, method = "fdr") # Benjamini-Hochberg
+pVals
 ```
 
+From book - 
 This code “applies” the function to each row (specified by 1) of the expression matrix, data. In the function we are returning just the p.value from the ks.test output. We can now consider how many of the ground truth positive and negative DE genes are detected by the KS-test
 
 ```{r}
 sigDE <- names(pVals)[pVals < 0.05]
 length(sigDE) 
 
-sum(GroundTruth$DE %in% sigDE) 
-sum(GroundTruth$notDE %in% sigDE)
+sum(GroundTruth$DE %in% sigDE) # true positives
+sum(GroundTruth$notDE %in% sigDE) # false positives
 ```
 
+From book - 
 As you can see many more of our ground truth negative genes were identified as DE by the KS-test (false positives) than ground truth positive genes (true positives), however this may be due to the larger number of notDE genes thus we typically normalize these counts as the True positive rate (TPR), TP/(TP + FN), and False positive rate (FPR), FP/(FP+TP)
 
 ```{r}
@@ -195,6 +263,7 @@ fpr <- fp/(fp + tn)
 cat(c(tpr, fpr))
 ```
 
+From book - 
 **Now we can see the TPR is much higher than the FPR indicating the KS test is identifying DE genes**
 
 So far we’ve only evaluated the performance at a single significance threshold. Often it is informative to vary the threshold and evaluate performance across a range of values. This is then plotted as a receiver-operating-characteristic curve (ROC) and a general accuracy statistic can be calculated as the area under this curve (AUC). We will use the ROCR package to facilitate this plotting
@@ -203,8 +272,10 @@ So far we’ve only evaluated the performance at a single significance threshold
 # Only consider genes for which we know the ground truth
 pVals <- pVals[names(pVals) %in% GroundTruth$DE | 
                names(pVals) %in% GroundTruth$notDE] 
-truth <- rep(1, times = length(pVals));
-truth[names(pVals) %in% GroundTruth$DE] = 0;
+truth <- rep(1, times = length(pVals))
+truth
+truth[names(pVals) %in% GroundTruth$DE] = 0
+truth
 pred <- ROCR::prediction(pVals, truth)
 perf <- ROCR::performance(pred, "tpr", "fpr")
 ROCR::plot(perf)
