@@ -116,10 +116,11 @@ proteins %>%
 ```
 
 # Regular expressions
+
 ```{r}
 # Build two small data frames for these examples
 protein_small <- tibble(
-gene_names = c("A1BG_HUMAN", "A1CF_HUMAN", "B3GAT1_HUMAN"),
+protein_names = c("A1BG_HUMAN", "A1CF_HUMAN", "B3GAT1_HUMAN"),
 uniprot_id = c("P04217", "Q9NQ94", "Q9P2W7")
 )
 
@@ -131,44 +132,54 @@ my_expt <- tibble(
 # Use `protein_small` df for the following examples -
 # Only keep proteins whose name begins with an "A"
 protein_small %>% 
-  filter(str_detect(gene_names, "A")) # doesn't work
+  filter(str_detect(protein_names, "A")) # doesn't work
 protein_small %>% 
-  filter(str_detect(gene_names, "^A"))
+  filter(str_detect(protein_names, "^A"))
 
-str_view_all(gene_small$protein_names, "A")
-str_view_all(gene_small$protein_names, "^A")
+str_view_all(protein_small$protein_names, "A")
+str_view_all(protein_small$protein_names, "^A")
 
 # Remove "_HUMAN" from protein names from the `protein_small` data frame
 protein_small <- protein_small %>% 
-                  mutate(protein_names = str_replace(protein_names, "_HUMAN", ""))
+  mutate(gene_names = str_replace(protein_names, "_HUMAN", ""))
 
 # Use `my_expt` df for the following examples -
 # Convert all sample entries to lower case
 my_expt <- my_expt %>% 
-            mutate(sample = str_to_lower(sample))
+  mutate(sample = str_to_lower(sample))
 
 # Create a new column called "condition" that contains the sample entries with the numbers removed
 my_expt <- my_expt %>% 
-            mutate(condition = str_remove(sample, "[:digit:]"))
+  mutate(condition = str_remove(sample, "[:digit:]"))
 ```
 
 # Advanced Regex
+
 ```{r}
-# REMOVE EXTRA INFO FROM GENES
+# REMOVE EXTRA INFO FROM GENES (several ways to do it)
 gene_names <- c("A1BG (1)", "A1CF (29974)", "A2M (2)", "A2ML1 (144568)", "A3GALT2 (127550)", "A4GALT (53947)", "A4GNT (51146)", "AAAS (8086)", "AACS (65985)")
 
+# Remove white spaces, parenthesis, and everything in the parenthesis
 gene_names %>%
   stringr::str_replace("\\s*\\([^\\)]+\\)", "")
 
-# also
+# Remove everything after a white space, including the white space
 gene_names %>% 
   stringr::str_remove("\\s.*")
 
-# also
-word(gene_names)
+# Compute the START position and the END position of the FIRST "word" of the string using a withe space as a separator between words by default. Then, subset and return everything in this position range, that is, the first "word"
+stringr::word(gene_names)
+
+# Demonstration that this function is returning the first "word"
+stringr::word("A1BG A1CF")
+
+# Demonstration that this function is using a withe space as a separator between words by default
+# This is returning everything before "1" as a "word"
+stringr::word(gene_names, sep = "1") # default is 'sep = fixed(" ")'
 ```
 
 # Cleaning up column names
+
 ```{r}
 # Example data frame with messy column names
 typical_excel <- tibble(
@@ -177,10 +188,10 @@ typical_excel <- tibble(
 )
 # Why are the column names of this data frame problematic?
 typical_excel %>% 
-  filter(Gene Names == "A1BG_HUMAN")
+  filter(Gene Names == "A1BG_HUMAN") # expect error
 
 # Make the column names more "programming friendly"
-typical_r <- clean_names(typical_excel)
+typical_r <- janitor::clean_names(typical_excel)
 
 # Replace underscores with periods in column names (this is common in a lot of bioinformatics scripts)
 colnames(typical_r) <- str_replace(colnames(typical_r), "_", ".")
