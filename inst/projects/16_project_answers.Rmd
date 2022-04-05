@@ -34,6 +34,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 cran_pkgs <- c(
   "remotes",
+  "janitor",
   "tidyverse"
   )
 
@@ -165,5 +166,23 @@ gene_names %>%
 
 # also
 word(gene_names)
+```
+
+# Cleaning up column names
+```{r}
+# Example data frame with messy column names
+typical_excel <- tibble(
+`Gene Names` = c("A1BG_HUMAN", "A1CF_HUMAN", "B3GAT1_HUMAN"),
+`uniprot id` = c("P04217", "Q9NQ94", "Q9P2W7")
+)
+# Why are the column names of this data frame problematic?
+typical_excel %>% 
+  filter(Gene Names == "A1BG_HUMAN")
+
+# Make the column names more "programming friendly"
+typical_r <- clean_names(typical_excel)
+
+# Replace underscores with periods in column names (this is common in a lot of bioinformatics scripts)
+colnames(typical_r) <- str_replace(colnames(typical_r), "_", ".")
 ```
 
