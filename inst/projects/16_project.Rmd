@@ -1,5 +1,5 @@
 ---
-title: "Handling Strings in R (Answers)"
+title: "Handling Strings in R"
 author: "Your name"
 date: "Apr 06, 2022"
 
@@ -77,42 +77,36 @@ str_length(string)
 ?str_length
 
 # How many lysines does this sequence contain?
-str_count(string, "L")
+
 str_view_all(string, "L")
 
 # How many times do two consecutive Alanines occur in this sequence?
-str_count(string, "AA")
+
 str_view_all(string, "AA")
 
 # Does this sequence contain a Proline followed by a Valine followed by a Threonine?
-str_detect(string, "PVT")
+
 str_view_all(string, "PVT")
 
 # Does this sequence contain a Tryptophan, followed by ANY amino acid, and then a Valine?
-str_detect(string, "W.V")
-str_view_all(string, "W.V")
+
+
 ```
 
 # Handling strings in Data frames
 
 ```{r}
 # Take a look at the `proteins` df
-View(proteins)
+
 
 # How would you create a new dataframe that only contains proteins that contain the "RCP.L" motif?
-proteins %>% 
-  filter(str_detect(sequence, "RCP.L"))
+
 
 # Identify proteins that contain the E-box motif - "CANNTG". Create a new column called `e_box` that contains a `TRUE` if a sequence has this motif and a `FALSE` otherwise
-proteins %>% 
-  mutate(e_box = str_detect(sequence, "CA..TG")) %>% 
-  relocate(e_box) # this moves the named column to the start of the data frame
+
 
 # What are the mean protein lengths for proteins that contain an E-box versus proteins that do not?
-proteins %>% 
-  mutate(e_box = str_detect(sequence, "CA..TG")) %>% 
-  group_by(e_box) %>% 
-  summarise(mean_length = mean(length))
+
 ```
 
 # Regular expressions
@@ -137,10 +131,7 @@ my_expt <- tibble(
 
 # Use `protein_small` df for the following examples -
 # Only keep proteins whose name begins with an "A"
-protein_small %>% 
-  filter(str_detect(protein_names, "A")) # doesn't work
-protein_small %>% 
-  filter(str_detect(protein_names, "^A"))
+
 
 str_view_all(protein_small$protein_names, "A")
 str_view_all(protein_small$protein_names, "^A")
@@ -155,8 +146,7 @@ my_expt <- my_expt %>%
   mutate(sample = str_to_lower(sample))
 
 # Create a new column called "condition" that contains the sample entries with the numbers removed
-my_expt <- my_expt %>% 
-  mutate(condition = str_remove(sample, "[:digit:]"))
+
 ```
 
 # Advanced Regex
