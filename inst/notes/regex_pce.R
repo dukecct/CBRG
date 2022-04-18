@@ -14,8 +14,8 @@ gene_names %>%
 
 gene_names <- c("A1BG [Bareja et al. 2022]", "A1CF [Castellano et al. 2022]", "A2M [Hirschey et al. 2022]")
 
-gene_names %>%
-  stringr::str_replace_all("\\[.*]", "") # remove text within square brackets (for example, references)
+gene_names <- gene_names %>%
+                stringr::str_replace_all("\\[.*]", "") # remove text within square brackets (for example, references)
 
 ## Woop! Seems that we have some whitespaces...
 
@@ -47,7 +47,7 @@ gene_names %>%
 gene_names %>%
   stringr::str_replace_all("[[:punct:]]", " ") %>% # remove ALL punctuation marks
   stringr::str_squish() %>% # remove extra whitespaces
-  stringr::str_replace_all(" ", "_") # replace whitespaces for a lower bar
+  stringr::str_replace_all(" ", "-") # replace whitespaces for a lower bar
 
 # CLEAN PROTEIN NAMES
 protein_names <- c("A1BG_HUMAN", "A1CF_HUMAN")

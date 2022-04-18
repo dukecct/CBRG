@@ -1,0 +1,185 @@
+---
+title: "Hierarchical Clustering and Heatmaps (Answers)"
+author: "Your name"
+date: "Apr 20, 2022"
+
+output:
+  html_document: 
+    
+    toc: true 
+    toc_float: 
+      collapsed: false 
+      smooth_scroll: false 
+      
+    number_sections: true 
+    
+    theme: paper 
+    
+    output: 
+      fig_width: 10 
+      fig_height: 8 
+      fig_caption: true 
+      dev: svg 
+    
+    #Dataframe printing
+    df_print: paged 
+    
+    code_folding: show 
+  
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cran_pkgs <- c(
+  "remotes",
+  "pheatmap",
+  "ISLR",
+  "matrixStats",
+  "dendextend",
+  "tidyverse"
+  )
+
+# Install and load CRAN packages
+installifnot <- function(pckgName){
+    if (!(require(pckgName, character.only = TRUE))) {
+        install.packages(pckgName, dep = TRUE)
+        library(pckgName, character.only = TRUE)
+    }
+}
+
+lapply(cran_pkgs, installifnot)
+```
+
+# Useful references
+
+Much of the following code has been adapted from this amazing blog post by Dave Tang - https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/
+
+For more on the details of hierarchical clustering, here's a wonderful 3-part intro to the topic by Roger Peng - 
+https://youtu.be/BKoChxguelA (Part 1)
+https://youtu.be/ZQYLGS7ptWM (Part 2)
+https://youtu.be/lmSMEZAjE-4 (Part 3)
+
+```{r}
+data("NCI60")
+names(NCI60)
+nci_labs <- NCI60$labs
+nci_data <- NCI60$data
+
+# how many genes and samples does `nci_data` contain?
+dim(nci_data)
+
+# how many samples are there for each cancer type?
+table(nci_labs)
+
+# replace column names of `nci_data` with contents of `nci_labs`
+nci_data <- t(nci_data)
+nci_data <- as.data.frame(nci_data)
+colnames(nci_data) <- nci_labs
+
+# only keep data for breast and colon samples (n = 7 for both)
+indices <- str_detect(colnames(nci_data), "BREAST|COLON")
+
+# NOTE TO SELF - so it's not possible to use select when you have multiple columns with the SAME NAME??
+nci_small <- nci_data[ , indices]
+```
+
+```{r}
+# Keep the top 50 most varying genes
+nci_top_50 <- nci_small %>% 
+                dplyr::rowwise() %>% 
+                dplyr::mutate(topvar = var(c_across())) %>% 
+                dplyr::arrange(desc(topvar)) %>% 
+                .[1:50, ] %>%  # slice() not working??
+                dplyr::select(-topvar)
+
+# alternatively
+# rank each gene based on row variance
+nci_ranks <- rank(rowVars(as.matrix(nci_small)))
+
+# re-arrange row of `nci_small` using `ranks`
+nci_small <- nci_small[nci_ranks, ]
+
+# only keep the first twenty rows and convert back to data frame
+nci_top_50 <- as.data.frame(nci_small[1:50, ])
+# the second option is SO MUCH FASTER!
+
+# plot simple heatmap
+pheatmap(nci_top_50)
+
+# scale data
+?scale
+nci_top_50_scaled <- t(scale(t(nci_top_50)))
+
+# check
+rowMeans(nci_top_50_scaled) %>% head() # basically 0s
+rowSds(as.matrix(nci_top_50_scaled)) %>% head() # 1
+
+# plot heatmap of z-scaled data
+pheatmap(nci_top_50_scaled)
+
+# or
+pheatmap(nci_top_50,
+         scale = "row")
+
+# perform hierarchical clustering on genes
+my_hclust_gene <- hclust(dist(nci_top_50_scaled), method = "complete")
+
+# plot dendrogram
+as.dendrogram(my_hclust_gene) %>%
+  plot(horiz = TRUE)
+
+# split genes into two clusters
+my_gene_col <- cutree(tree = as.dendrogram(my_hclust_gene), k = 2)
+ 
+my_gene_col
+
+# convert to a data frame
+my_gene_df <- data.frame(
+  cluster_id = paste0("cluster ", my_gene_col)
+)
+# add gene names as rownames
+rownames(my_gene_df) <- names(my_gene_col)
+
+# add this gene cluster info to your heatmap
+pheatmap(nci_top_50_scaled, 
+         annotation_row = my_gene_df)
+
+# create a data frame for samples that contains a column called "tissue"
+# this column contains "BREAST" for a breast cancer sample, and "COLON" for a colon cancer sample
+colnames(nci_top_50_scaled) # we just need to stip off the "." and numbers
+my_sample_col <- data.frame(
+  sample = str_remove(colnames(nci_top_50_scaled), "\\.[:digit:]+")
+)
+# add sample names as rownames
+rownames(my_sample_col) <- colnames(nci_top_50_scaled)
+
+my_sample_col
+
+# add this sample info to your heatmap
+pheatmap(nci_top_50_scaled, 
+         annotation_row = my_gene_df, 
+         annotation_col = my_sample_col)
+
+# add two breaks to your genes and samples
+pheatmap(nci_top_50_scaled, 
+         annotation_row = my_gene_df, 
+         annotation_col = my_sample_col,
+         cutree_rows = 2,
+         cutree_cols = 2)
+
+# remove dendrogram for genes
+pheatmap(nci_top_50_scaled, 
+         annotation_row = my_gene_df, 
+         annotation_col = my_sample_col,
+         cutree_rows = 2,
+         cutree_cols = 2,
+         treeheight_row = 0)
+
+# which linkage method does pheatmap() use?
+# "complete". We know this because pheatmap() uses hclust() to perform hierarchical clustering, and the default linkage method for hclust() is "complete"
+# see 
+# ?hclust
+```
+
