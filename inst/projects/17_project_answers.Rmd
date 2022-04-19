@@ -38,7 +38,8 @@ cran_pkgs <- c(
   "ISLR",
   "matrixStats",
   "dendextend",
-  "tidyverse"
+  "tidyverse",
+  "janitor"
   )
 
 # Install and load CRAN packages
@@ -64,6 +65,7 @@ https://youtu.be/lmSMEZAjE-4 (Part 3)
 ```{r}
 data("NCI60")
 names(NCI60)
+
 nci_labs <- NCI60$labs
 nci_data <- NCI60$data
 
@@ -73,33 +75,42 @@ dim(nci_data)
 # how many samples are there for each cancer type?
 table(nci_labs)
 
+# plot it!
+table(nci_labs) %>% 
+  as_tibble() %>%
+  ggplot(aes(reorder(nci_labs, -n), n)) +
+  geom_bar(stat = "identity") +
+  labs(x = NULL, y = "Samples") +
+  theme(axis.text.x = element_text(hjust = 1, angle = 45))
+
 # replace column names of `nci_data` with contents of `nci_labs`
 nci_data <- t(nci_data)
 nci_data <- as.data.frame(nci_data)
 colnames(nci_data) <- nci_labs
 
 # only keep data for breast and colon samples (n = 7 for both)
-indices <- str_detect(colnames(nci_data), "BREAST|COLON")
-
-# NOTE TO SELF - so it's not possible to use select when you have multiple columns with the SAME NAME??
-nci_small <- nci_data[ , indices]
+# we have repeated colnames, so let's fix this first!
+nci_small <- nci_data %>% 
+  janitor::clean_names() %>% 
+  dplyr::select_at(vars(contains("breast") | contains("colon")))
 ```
 
 ```{r}
 # Keep the top 50 most varying genes
 nci_top_50 <- nci_small %>% 
-                dplyr::rowwise() %>% 
-                dplyr::mutate(topvar = var(c_across())) %>% 
-                dplyr::arrange(desc(topvar)) %>% 
-                .[1:50, ] %>%  # slice() not working??
-                dplyr::select(-topvar)
+  dplyr::rowwise() %>% 
+  dplyr::mutate(vars = var(c_across())) %>%
+  dplyr::ungroup() %>% # don't forget to ungroup - this stops rowwise grouping
+  dplyr::arrange(desc(vars)) %>% 
+  dplyr::slice(1:50) %>% 
+  dplyr::select(-vars)
 
 # alternatively
 # rank each gene based on row variance
 nci_ranks <- rank(rowVars(as.matrix(nci_small)))
 
 # re-arrange row of `nci_small` using `ranks`
-nci_small <- nci_small[nci_ranks, ]
+nci_small <- nci_small[nci_ranks ,]
 
 # only keep the first twenty rows and convert back to data frame
 nci_top_50 <- as.data.frame(nci_small[1:50, ])
@@ -121,7 +132,7 @@ pheatmap(nci_top_50_scaled)
 
 # or
 pheatmap(nci_top_50,
-         scale = "row")
+         scale = "row") # row == genes
 
 # perform hierarchical clustering on genes
 my_hclust_gene <- hclust(dist(nci_top_50_scaled), method = "complete")
@@ -138,7 +149,8 @@ my_gene_col
 # convert to a data frame
 my_gene_df <- data.frame(
   cluster_id = paste0("cluster ", my_gene_col)
-)
+  )
+
 # add gene names as rownames
 rownames(my_gene_df) <- names(my_gene_col)
 
@@ -147,11 +159,12 @@ pheatmap(nci_top_50_scaled,
          annotation_row = my_gene_df)
 
 # create a data frame for samples that contains a column called "tissue"
-# this column contains "BREAST" for a breast cancer sample, and "COLON" for a colon cancer sample
-colnames(nci_top_50_scaled) # we just need to stip off the "." and numbers
+# this column contains "breast" for a breast cancer sample, and "colon" for a colon cancer sample
+colnames(nci_top_50_scaled) # we just need to stip off the "_" and numbers
 my_sample_col <- data.frame(
-  sample = str_remove(colnames(nci_top_50_scaled), "\\.[:digit:]+")
-)
+  tissue = str_remove(colnames(nci_top_50_scaled), "\\_.")
+  )
+
 # add sample names as rownames
 rownames(my_sample_col) <- colnames(nci_top_50_scaled)
 
@@ -181,5 +194,42 @@ pheatmap(nci_top_50_scaled,
 # "complete". We know this because pheatmap() uses hclust() to perform hierarchical clustering, and the default linkage method for hclust() is "complete"
 # see 
 # ?hclust
+```
+
+# BONUS - Visualize the scaling effect on a PCA with POMA
+
+```{r}
+# BiocManager::install("POMA")
+library(POMA)
+
+# install.packages("patchwork")
+library(patchwork)
+
+not_normalized <- st000284 %>% 
+  PomaMultivariate(method = "pca")
+
+normalized <- st000284 %>% 
+  PomaNorm(method = "log_scaling") %>% # note that this line is the only difference
+  PomaMultivariate(method = "pca")
+
+# while the sample separation in the 2D space doesn't change a lot, 
+# the variance % explained for the first component does
+not_normalized$scoresplot + ggtitle("Not normalized") | normalized$scoresplot + ggtitle("Normalized") 
+
+# why?
+# Because in the left side of the plot (not normalized) the variance of almost all dataset is explained by few variables 
+# (those with more variance - not scaled), and in the right side, the explained variance is lower, 
+# but distributed across features
+
+(not_normalized$screeplot + 
+    ggtitle("Not normalized") +
+    theme(legend.position = "none") | 
+    normalized$screeplot + 
+    ggtitle("Normalized") + 
+    theme(legend.position = "none")) /
+  (not_normalized$loadings_plot + 
+     theme(legend.position = "top") | 
+     normalized$loadings_plot + 
+     theme(legend.position = "top"))
 ```
 
