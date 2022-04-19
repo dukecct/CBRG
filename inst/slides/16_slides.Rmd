@@ -1,0 +1,138 @@
+---
+title: "Computational Biology Reading Group"
+subtitle: "<br/>CBRG"
+author: ""
+institute: "DMPI"
+date: "April 20, 2022"
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(kableExtra)
+library(xaringanExtra)
+library(janitor)
+library(xaringanthemer)
+library(pheatmap)
+library(ggrepel)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+style_mono_accent(
+  base_color = "#00539B",
+  header_font_google = google_font("Adobe Caslon"),
+  text_font_google   = google_font("Adobe Caslon", "300", "300i"),
+  code_font_google   = google_font("Fira Mono")
+)
+```
+
+```{r xaringanExtra-freezeframe, echo = FALSE, message = FALSE}
+options(htmltools.dir.version = FALSE)
+xaringanExtra::use_freezeframe()
+```
+
+```{r xaringanExtra-clipboard, echo=FALSE}
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-panelset, echo=FALSE}
+xaringanExtra::use_panelset()
+```
+
+class: center, middle
+
+# Hierarchical Clustering and Heatmaps 
+
+---
+# Example Dataset
+
+```{r, echo = FALSE}
+df <- tibble(
+  gene = c("Gene A", "Gene B", "Gene C", "Gene D", "Gene E", "Gene F"),
+  sample_one = c(1, 1.2, 0.9, 3.1, 2.9, 3.2),
+  sample_two = c(0.9, 0.9, 0.8, 3, 3.1, 3.2)
+)
+
+df %>% 
+  kbl() %>% 
+  kable_classic()
+```
+---
+.center[
+```{r, echo = FALSE}
+df %>% 
+  ggplot(aes(sample_one, sample_two, label = gene)) +
+  geom_point() +
+  geom_text_repel() +
+  theme_bw()
+```
+]
+---
+.center[
+```{r, echo = FALSE}
+df_dist <- dist(as.matrix(df[ , -1]))
+
+plot(hclust(df_dist), labels = df$gene)
+```
+]
+---
+# Linkage Methods
+.center[
+```{r, echo = FALSE}
+tibble(
+  Linkage = c("Complete", "Single", "Average", "Centroid"),
+  Description = c("Compute all pairwise dissimilairites between the observations in cluster A and the observations in cluster B, and record the largest of the similarities",
+                  "...record the smallest of the similarities",
+                  "...record the average of the similairites",
+                  "Dissimilarity between the centroid for cluster A (a mean vector of length p) and the centroid for cluster B")
+) %>% 
+  kbl() %>% 
+  kable_classic()
+```
+]
+.footnote[Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani. (2013). An introduction to statistical learning : with applications in R. New York :Springer]
+
+---
+# The Importance of Scaling
+.center[
+```{r, echo = FALSE}
+df_2 <- tibble(
+  gene = c("Gene A", "Gene B", "Gene C", "Gene D", "Gene E", "Gene F"),
+  sample_one = c(1, 1.2, 0.9, 3.1, 2.9, 320),
+  sample_two = c(2, 2.4, 1.8, 6.2, 5.8, 640)
+)
+
+df_2 %>% 
+  kbl() %>% 
+  kable_classic()
+```
+]
+---
+# Heatmap without scaling
+.center[
+```{r, echo = FALSE}
+df_heat <- as.matrix(df_2[ , -1])
+rownames(df_heat) <- df_2$gene
+
+pheatmap(df_heat)
+```
+]
+---
+# Heatmap with scaling
+.center[
+```{r, echo = FALSE}
+df_heat <- as.matrix(df_2[ , -1])
+rownames(df_heat) <- df_2$gene
+
+pheatmap(df_heat,
+         scale = "row")
+```
+]
