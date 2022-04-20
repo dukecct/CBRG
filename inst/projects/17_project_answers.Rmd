@@ -106,11 +106,11 @@ nci_top_50 <- nci_small %>%
   dplyr::select(-vars)
 
 # alternatively
-# rank each gene based on row variance
-nci_ranks <- rank(rowVars(as.matrix(nci_small)))
+# order each gene based on row variance
+nci_order <- order(rowVars(as.matrix(nci_small)), decreasing = TRUE)
 
 # re-arrange row of `nci_small` using `ranks`
-nci_small <- nci_small[nci_ranks ,]
+nci_small <- nci_small[nci_order ,]
 
 # only keep the first twenty rows and convert back to data frame
 nci_top_50 <- as.data.frame(nci_small[1:50, ])

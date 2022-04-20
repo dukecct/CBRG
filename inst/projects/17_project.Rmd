@@ -99,8 +99,8 @@ nci_top_50 <- nci_small %>%
   dplyr::select(-vars)
 
 # alternatively
-# rank each gene based on row variance
-nci_ranks <- 
+# order each gene based on row variance
+nci_order <- 
 
 # re-arrange row of `nci_small` using `ranks`
 nci_small <- 
