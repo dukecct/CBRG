@@ -100,13 +100,13 @@ nci_top_50 <- nci_small %>%
 
 # alternatively
 # rank each gene based on row variance
-nci_ranks <- rank(rowVars(as.matrix(nci_small)))
+nci_ranks <- 
 
 # re-arrange row of `nci_small` using `ranks`
-nci_small <- nci_small[nci_ranks ,]
+nci_small <- 
 
 # only keep the first twenty rows and convert back to data frame
-nci_top_50 <- as.data.frame(nci_small[1:50, ])
+nci_top_50 <- 
 # the second option is SO MUCH FASTER!
 
 # why select the most highly varying genes (which is a common practice)?
@@ -121,7 +121,7 @@ nci_top_50 <- as.data.frame(nci_small[1:50, ])
 
 # scale data
 ?scale
-nci_top_50_scaled <- t(scale(t(nci_top_50)))
+nci_top_50_scaled <-
 
 # check
 rowMeans(nci_top_50_scaled) %>% head() # basically 0s
