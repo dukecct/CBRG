@@ -1,5 +1,5 @@
 ---
-title: "Hierarchical Clustering and Heatmaps (Answers)"
+title: "Hierarchical Clustering and Heatmaps"
 author: "Your name"
 date: "Apr 20, 2022"
 
@@ -70,18 +70,13 @@ nci_labs <- NCI60$labs
 nci_data <- NCI60$data
 
 # how many genes and samples does `nci_data` contain?
-dim(nci_data)
+
 
 # how many samples are there for each cancer type?
-table(nci_labs)
+
 
 # plot it!
-table(nci_labs) %>% 
-  as_tibble() %>%
-  ggplot(aes(reorder(nci_labs, -n), n)) +
-  geom_bar(stat = "identity") +
-  labs(x = NULL, y = "Samples") +
-  theme(axis.text.x = element_text(hjust = 1, angle = 45))
+
 
 # replace column names of `nci_data` with contents of `nci_labs`
 nci_data <- t(nci_data)
@@ -90,9 +85,7 @@ colnames(nci_data) <- nci_labs
 
 # only keep data for breast and colon samples (n = 7 for both)
 # we have repeated colnames, so let's fix this first!
-nci_small <- nci_data %>% 
-  janitor::clean_names() %>% 
-  dplyr::select_at(vars(contains("breast") | contains("colon")))
+
 ```
 
 ```{r}
@@ -124,7 +117,7 @@ nci_top_50 <- as.data.frame(nci_small[1:50, ])
 # biological effect
 
 # plot simple heatmap
-pheatmap(nci_top_50)
+
 
 # scale data
 ?scale
@@ -138,8 +131,7 @@ rowSds(as.matrix(nci_top_50_scaled)) %>% head() # 1
 pheatmap(nci_top_50_scaled)
 
 # or
-pheatmap(nci_top_50,
-         scale = "row") # row == genes
+
 
 # perform hierarchical clustering on genes
 my_hclust_gene <- hclust(dist(nci_top_50_scaled), method = "complete")
@@ -203,40 +195,4 @@ pheatmap(nci_top_50_scaled,
 # ?hclust
 ```
 
-# BONUS - Visualize the scaling effect on a PCA with POMA
-
-```{r}
-# BiocManager::install("POMA")
-library(POMA)
-
-# install.packages("patchwork")
-library(patchwork)
-
-not_normalized <- st000284 %>% 
-  PomaMultivariate(method = "pca")
-
-normalized <- st000284 %>% 
-  PomaNorm(method = "log_scaling") %>% # note that this line is the only difference
-  PomaMultivariate(method = "pca")
-
-# while the sample separation in the 2D space doesn't change a lot, 
-# the variance % explained for the first component does
-not_normalized$scoresplot + ggtitle("Not normalized") | normalized$scoresplot + ggtitle("Normalized") 
-
-# why?
-# Because in the left side of the plot (not normalized) the variance of almost all dataset is explained by few variables 
-# (those with more variance - not scaled), and in the right side, the explained variance is lower, 
-# but distributed across features
-
-(not_normalized$screeplot + 
-    ggtitle("Not normalized") +
-    theme(legend.position = "none") | 
-    normalized$screeplot + 
-    ggtitle("Normalized") + 
-    theme(legend.position = "none")) /
-  (not_normalized$loadings_plot + 
-     theme(legend.position = "top") | 
-     normalized$loadings_plot + 
-     theme(legend.position = "top"))
-```
 
